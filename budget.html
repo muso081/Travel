@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8fafc">
+  <title>Budget | TravelTogether</title>
+  <link rel="stylesheet" href="./budget.css">
+  <script src="./budget.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="./index.html" aria-label="TravelTogether home">
+        <span class="brand-mark" aria-hidden="true">T</span>
+        <span>TravelTogether</span>
+      </a>
+      <nav class="primary-nav" aria-label="Main navigation">
+        <a href="./index.html">Explore</a>
+        <a href="./itinerary.html">Itinerary</a>
+        <a href="./budget.html" aria-current="page">Budget</a>
+        <a href="./packing.html">Packing</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section id="no-trip" class="empty-trip" hidden aria-labelledby="no-trip-title">
+      <div class="empty-mark" aria-hidden="true">&gt;</div>
+      <p class="eyebrow">A good trip starts somewhere</p>
+      <h1 id="no-trip-title">Create a trip first</h1>
+      <p>Set up your destination and dates, then come back to plan the costs.</p>
+      <a class="button button-primary" href="./index.html">Go to Explore</a>
+    </section>
+
+    <div id="budget-app" hidden>
+      <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+      <section class="page-heading" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">Spend with a little more certainty</p>
+          <h1 id="page-title">Trip budget</h1>
+          <p class="trip-subtitle" id="trip-subtitle"></p>
+        </div>
+        <div class="toolbar" aria-label="Budget tools">
+          <button class="button button-secondary" id="import-button" type="button">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 13V3m0 0L6.5 6.5M10 3l3.5 3.5M4 12.5v3h12v-3"/></svg>
+            Import
+          </button>
+          <input id="import-file" type="file" accept="application/json,.json" hidden>
+          <button class="button button-secondary" id="export-button" type="button">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10m0 0 3.5-3.5M10 13 6.5 9.5M4 13v3h12v-3"/></svg>
+            Export
+          </button>
+        </div>
+      </section>
+
+      <section class="budget-setting" aria-labelledby="budget-setting-title">
+        <div>
+          <p class="eyebrow">Your limit</p>
+          <h2 id="budget-setting-title">Total trip budget</h2>
+        </div>
+        <div class="budget-input-wrap">
+          <span id="currency-prefix" aria-hidden="true"></span>
+          <input id="total-budget" type="number" min="0" step="0.01" inputmode="decimal" aria-label="Total trip budget">
+          <button class="button button-primary" id="save-budget" type="button">Save budget</button>
+        </div>
+        <p id="budget-error" class="form-error" role="alert" hidden></p>
+      </section>
+
+      <section class="summary-grid" aria-label="Budget summary">
+        <article class="summary-card summary-primary">
+          <span class="summary-label">Remaining budget</span>
+            <strong id="remaining-total" aria-live="polite">-</strong>
+          <span id="remaining-caption" class="summary-caption"></span>
+        </article>
+        <article class="summary-card">
+          <span class="summary-label">Planned</span>
+          <strong id="planned-total">-</strong>
+          <span class="summary-caption">Not marked as paid</span>
+        </article>
+        <article class="summary-card">
+          <span class="summary-label">Paid</span>
+          <strong id="paid-total">-</strong>
+          <span class="summary-caption">Already paid</span>
+        </article>
+        <article class="summary-card">
+          <span class="summary-label">Per traveler</span>
+          <strong id="traveler-total">-</strong>
+          <span class="summary-caption">All expenses shared evenly</span>
+        </article>
+      </section>
+
+      <div class="content-grid">
+        <div class="overview-column">
+          <section class="panel chart-panel" aria-labelledby="chart-title">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Where it goes</p>
+                <h2 id="chart-title">By category</h2>
+              </div>
+              <span id="chart-total" class="panel-total"></span>
+            </div>
+            <div id="category-chart" class="category-chart" role="list" aria-label="Expense totals by category"></div>
+          </section>
+
+          <section class="panel expenses-panel" aria-labelledby="expenses-title">
+            <div class="section-heading expenses-heading">
+              <div>
+                <p class="eyebrow">The details</p>
+                <h2 id="expenses-title">Expenses <span id="expense-count" class="count-badge">0</span></h2>
+              </div>
+              <div class="filters" aria-label="Filter expenses">
+                <label class="visually-hidden" for="filter-status">Filter by payment status</label>
+                <select id="filter-status">
+                  <option value="all">All statuses</option>
+                  <option value="planned">Planned</option>
+                  <option value="paid">Paid</option>
+                </select>
+                <label class="visually-hidden" for="filter-category">Filter by category</label>
+                <select id="filter-category">
+                  <option value="all">All categories</option>
+                  <option value="transport">Transport</option>
+                  <option value="accommodation">Accommodation</option>
+                  <option value="food">Food</option>
+                  <option value="activities">Activities</option>
+                  <option value="shopping">Shopping</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+            <div id="expense-list" class="expense-list" aria-live="polite"></div>
+          </section>
+          <p id="storage-note" class="storage-note">Changes save automatically in this browser.</p>
+        </div>
+
+        <aside class="editor-column" aria-labelledby="form-title">
+          <div class="editor-heading">
+            <div>
+              <p class="eyebrow">Keep every cost in view</p>
+              <h2 id="form-title">Add an expense</h2>
+            </div>
+            <span class="editor-icon" aria-hidden="true">+</span>
+          </div>
+          <form id="expense-form" novalidate>
+            <input id="expense-id" type="hidden">
+            <div class="field">
+              <label for="description">Description <span aria-hidden="true">*</span></label>
+              <input id="description" type="text" maxlength="100" required autocomplete="off" placeholder="e.g. Train to the coast">
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label for="amount">Amount (<span id="currency-label"></span>) <span aria-hidden="true">*</span></label>
+                <input id="amount" type="number" min="0.01" step="0.01" inputmode="decimal" required placeholder="0.00">
+              </div>
+              <div class="field">
+                <label for="category">Category <span aria-hidden="true">*</span></label>
+                <select id="category" required>
+                  <option value="transport">Transport</option>
+                  <option value="accommodation">Accommodation</option>
+                  <option value="food">Food</option>
+                  <option value="activities">Activities</option>
+                  <option value="shopping">Shopping</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="expense-date">Date <span aria-hidden="true">*</span></label>
+              <input id="expense-date" type="date" required>
+            </div>
+            <fieldset class="status-field">
+              <legend>Payment status</legend>
+              <label><input type="radio" name="status" value="planned" checked><span>Planned</span></label>
+              <label><input type="radio" name="status" value="paid"><span>Paid</span></label>
+            </fieldset>
+            <p id="form-error" class="form-error" role="alert" hidden></p>
+            <div class="form-actions">
+              <button class="button button-primary" id="save-expense" type="submit">Save expense</button>
+              <button class="button button-text" id="cancel-edit" type="button" hidden>Cancel edit</button>
+            </div>
+            <p class="required-note">* Required fields</p>
+          </form>
+        </aside>
+      </div>
+    </div>
+  </main>
+  <footer class="site-footer"><span>TravelTogether</span><span>Made for the miles between here and there.</span></footer>
+</body>
+</html>
