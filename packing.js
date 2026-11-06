@@ -3,6 +3,24 @@
 
   const TRIP_KEY = "tp:trip";
   const STORAGE_PREFIX = "tp:packing:";
+  const SAMPLE_TRIP = {
+    id: "sample-lisbon",
+    title: "Lisbon Escape",
+    destination: "Lisbon, Portugal",
+    startDate: "2026-06-14",
+    endDate: "2026-06-18",
+    currency: "EUR",
+    travelers: 2
+  };
+  const SAMPLE_ITEMS = [
+    { id: "sample-pack-1", name: "Passport", category: "documents", quantity: 2, traveler: "Traveler 1", packed: true },
+    { id: "sample-pack-2", name: "Flight tickets", category: "documents", quantity: 1, traveler: "Traveler 2", packed: true },
+    { id: "sample-pack-3", name: "Comfortable walking shoes", category: "clothing", quantity: 2, traveler: "Traveler 1", packed: false },
+    { id: "sample-pack-4", name: "Light jacket", category: "clothing", quantity: 1, traveler: "Traveler 2", packed: false },
+    { id: "sample-pack-5", name: "Toothbrush", category: "toiletries", quantity: 2, traveler: "Traveler 1", packed: true },
+    { id: "sample-pack-6", name: "Phone charger", category: "electronics", quantity: 2, traveler: "Traveler 2", packed: false },
+    { id: "sample-pack-7", name: "Sunscreen", category: "health", quantity: 1, traveler: "Traveler 1", packed: false }
+  ];
   const CATEGORY_LABELS = {
     documents: "Documents",
     clothing: "Clothing",
@@ -207,10 +225,15 @@
     try {
       const raw = localStorage.getItem(TRIP_KEY);
       if (!raw) {
-        return null;
+        localStorage.setItem(TRIP_KEY, JSON.stringify(SAMPLE_TRIP));
+        return SAMPLE_TRIP;
       }
       const parsed = JSON.parse(raw);
-      return isValidTrip(parsed) ? parsed : null;
+      if (!isValidTrip(parsed)) {
+        localStorage.setItem(TRIP_KEY, JSON.stringify(SAMPLE_TRIP));
+        return SAMPLE_TRIP;
+      }
+      return parsed;
     } catch (error) {
       storageAvailable = false;
       showNotice("Trip data could not be read in this browser. Check storage settings and reload.", true);
@@ -258,12 +281,16 @@
     try {
       const raw = localStorage.getItem(STORAGE_PREFIX + trip.id);
       if (!raw) {
-        return [];
+        const sample = SAMPLE_ITEMS.map((item) => ({ ...item }));
+        localStorage.setItem(STORAGE_PREFIX + trip.id, JSON.stringify({ version: 1, items: sample }));
+        return sample;
       }
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
         showNotice("Saved packing data was invalid. A fresh list is ready; saving will replace the invalid data.", true);
-        return [];
+        const sample = SAMPLE_ITEMS.map((item) => ({ ...item }));
+        localStorage.setItem(STORAGE_PREFIX + trip.id, JSON.stringify({ version: 1, items: sample }));
+        return sample;
       }
 
       const source = Array.isArray(parsed.items) ? parsed.items : [];
@@ -278,10 +305,19 @@
         seen.add(valid.id);
         next.push(valid);
       });
+
+      if (!next.length && source.length) {
+        const sample = SAMPLE_ITEMS.map((item) => ({ ...item }));
+        localStorage.setItem(STORAGE_PREFIX + trip.id, JSON.stringify({ version: 1, items: sample }));
+        return sample;
+      }
+
       return next;
     } catch (error) {
       showNotice("Saved packing data could not be read. A fresh list is ready; saving will replace the invalid data.", true);
-      return [];
+      const sample = SAMPLE_ITEMS.map((item) => ({ ...item }));
+      localStorage.setItem(STORAGE_PREFIX + trip.id, JSON.stringify({ version: 1, items: sample }));
+      return sample;
     }
   }
 

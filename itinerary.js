@@ -3,6 +3,22 @@
 
   const TRIP_KEY = "tp:trip";
   const STORAGE_PREFIX = "tp:itinerary:";
+  const SAMPLE_TRIP = {
+    id: "sample-lisbon",
+    title: "Lisbon Escape",
+    destination: "Lisbon, Portugal",
+    startDate: "2026-06-14",
+    endDate: "2026-06-18",
+    currency: "EUR",
+    travelers: 2
+  };
+  const SAMPLE_ACTIVITIES = [
+    { id: "sample-act-1", title: "Arrival and check-in", date: "2026-06-14", startTime: "15:00", duration: 1.5, location: "Alfama", notes: "Drop bags and rest before sunset walk." },
+    { id: "sample-act-2", title: "Tram 28 ride", date: "2026-06-15", startTime: "09:30", duration: 1.25, location: "Baixa", notes: "Start with the old neighborhoods and coffee stop." },
+    { id: "sample-act-3", title: "Sunset at Miradouro", date: "2026-06-15", startTime: "20:00", duration: 2, location: "Santa Luzia", notes: "Bring a light jacket and camera." },
+    { id: "sample-act-4", title: "Day trip to Sintra", date: "2026-06-16", startTime: "08:45", duration: 7.5, location: "Sintra", notes: "Book tickets ahead for the palace and gardens." },
+    { id: "sample-act-5", title: "Beach afternoon", date: "2026-06-17", startTime: "13:00", duration: 3, location: "Carcavelos Beach", notes: "Pack sunscreen, towels, and water." }
+  ];
   const elements = {
     app: document.getElementById("itinerary-app"),
     noTrip: document.getElementById("no-trip"),
@@ -113,7 +129,16 @@
   function readActiveTrip() {
     try {
       const raw = localStorage.getItem(TRIP_KEY);
-      return raw ? JSON.parse(raw) : null;
+      if (!raw) {
+        localStorage.setItem(TRIP_KEY, JSON.stringify(SAMPLE_TRIP));
+        return SAMPLE_TRIP;
+      }
+      const parsed = JSON.parse(raw);
+      if (!isValidTrip(parsed)) {
+        localStorage.setItem(TRIP_KEY, JSON.stringify(SAMPLE_TRIP));
+        return SAMPLE_TRIP;
+      }
+      return parsed;
     } catch (error) {
       storageAvailable = false;
       showNotice("Trip data could not be read from this browser. Check storage settings and reload.", true);
@@ -144,11 +169,17 @@
   function loadActivities() {
     try {
       const raw = localStorage.getItem(STORAGE_PREFIX + trip.id);
-      if (!raw) return [];
+      if (!raw) {
+        const sample = SAMPLE_ACTIVITIES.map((activity) => ({ ...activity }));
+        localStorage.setItem(STORAGE_PREFIX + trip.id, JSON.stringify({ version: 1, activities: sample }));
+        return sample;
+      }
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || !Array.isArray(parsed.activities) || parsed.activities.length > 5000) {
         showNotice("Saved itinerary data was invalid. A fresh schedule is ready; saving will replace the invalid data.", true);
-        return [];
+        const sample = SAMPLE_ACTIVITIES.map((activity) => ({ ...activity }));
+        localStorage.setItem(STORAGE_PREFIX + trip.id, JSON.stringify({ version: 1, activities: sample }));
+        return sample;
       }
       const loaded = [];
       const ids = new Set();
@@ -161,10 +192,17 @@
         ids.add(activity.id);
         loaded.push(activity);
       }
+      if (!loaded.length && parsed.activities.length) {
+        const sample = SAMPLE_ACTIVITIES.map((activity) => ({ ...activity }));
+        localStorage.setItem(STORAGE_PREFIX + trip.id, JSON.stringify({ version: 1, activities: sample }));
+        return sample;
+      }
       return loaded;
     } catch (error) {
       showNotice("Saved itinerary data could not be read. A fresh schedule is ready; saving will replace the invalid data.", true);
-      return [];
+      const sample = SAMPLE_ACTIVITIES.map((activity) => ({ ...activity }));
+      localStorage.setItem(STORAGE_PREFIX + trip.id, JSON.stringify({ version: 1, activities: sample }));
+      return sample;
     }
   }
 
