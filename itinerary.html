@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8fafc">
+  <title>Itinerary | TravelTogether</title>
+  <link rel="stylesheet" href="./itinerary.css">
+  <script src="./itinerary.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="./index.html" aria-label="TravelTogether home">
+        <span class="brand-mark" aria-hidden="true">T</span>
+        <span>TravelTogether</span>
+      </a>
+      <nav class="primary-nav" aria-label="Main navigation">
+        <a href="./index.html">Explore</a>
+        <a href="./itinerary.html" aria-current="page">Itinerary</a>
+        <a href="./budget.html">Budget</a>
+        <a href="./packing.html">Packing</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+
+    <section id="no-trip" class="empty-trip" hidden aria-labelledby="no-trip-title">
+      <div class="empty-art" aria-hidden="true">
+        <svg viewBox="0 0 220 160" role="presentation">
+          <path d="M20 126h180" fill="none" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round"/>
+          <path d="M46 125V77l31-22 31 22v48M108 125V64l31-24 34 24v61" fill="#ccfbf1" stroke="#0d9488" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M60 125V96h18v29m43 0V82h18v20m15-21h13m-13 11h13" fill="none" stroke="#0f766e" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="177" cy="32" r="11" fill="#fcd34d"/>
+          <path d="m25 69 11-13 11 13m-5-6 7 8" fill="none" stroke="#64748b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <p class="eyebrow">Your trip, day by day</p>
+      <h1 id="no-trip-title">Create a trip first</h1>
+      <p>Your itinerary will be ready as soon as you choose a destination and dates.</p>
+      <a class="button button-primary" href="./index.html">Go to Explore</a>
+    </section>
+
+    <div id="itinerary-app" hidden>
+      <section class="page-heading" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">Make room for the good stuff</p>
+          <h1 id="page-title">Your itinerary</h1>
+          <p class="trip-subtitle" id="trip-subtitle"></p>
+        </div>
+        <div class="toolbar" aria-label="Itinerary tools">
+          <button class="button button-secondary" type="button" id="import-button">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 13V3m0 0L6.5 6.5M10 3l3.5 3.5M4 12.5v3h12v-3"/></svg>
+            Import
+          </button>
+          <input id="import-file" type="file" accept="application/json,.json" hidden>
+          <button class="button button-secondary" type="button" id="export-button">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10m0 0 3.5-3.5M10 13 6.5 9.5M4 13v3h12v-3"/></svg>
+            Export
+          </button>
+          <button class="button button-secondary" type="button" id="print-button">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 7V3h10v4M5 14H3V8h14v6h-2M5 11h10v6H5z"/><path d="M14 9h1"/></svg>
+            Print
+          </button>
+        </div>
+      </section>
+
+      <section class="trip-strip" aria-label="Trip details">
+        <div class="trip-detail"><span class="detail-label">Destination</span><strong id="trip-destination"></strong></div>
+        <div class="trip-detail"><span class="detail-label">Dates</span><strong id="trip-dates"></strong></div>
+        <div class="trip-detail"><span class="detail-label">Travelers</span><strong id="trip-travelers"></strong></div>
+        <div class="trip-detail"><span class="detail-label">Scheduled</span><strong id="trip-total"></strong></div>
+      </section>
+
+      <section class="planner" aria-label="Trip schedule">
+        <div class="schedule-column">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">The plan so far</p>
+              <h2>Daily schedule</h2>
+            </div>
+            <div class="day-summary" aria-live="polite">
+              <span><strong id="day-count">0</strong> activities</span>
+              <span class="summary-divider" aria-hidden="true"></span>
+              <span><strong id="day-hours">0h</strong> planned</span>
+            </div>
+          </div>
+
+          <div id="day-tabs" class="day-tabs" role="tablist" aria-label="Trip days"></div>
+          <div id="day-panel" class="day-panel" role="tabpanel" aria-labelledby="day-tab-0" tabindex="0">
+            <div class="day-panel-heading">
+              <div>
+                <p class="eyebrow" id="selected-day-label"></p>
+                <h3 id="selected-day-date"></h3>
+              </div>
+              <span class="day-total" id="selected-day-total"></span>
+            </div>
+            <div id="activity-list" class="activity-list"></div>
+          </div>
+          <section id="outside-section" class="outside-section" aria-labelledby="outside-title" hidden>
+            <div class="outside-heading">
+              <div>
+                <p class="eyebrow">Still saved</p>
+                <h3 id="outside-title">Outside trip dates</h3>
+              </div>
+              <span id="outside-count" class="day-total"></span>
+            </div>
+            <div id="outside-list" class="activity-list"></div>
+          </section>
+        </div>
+
+        <aside class="editor-column" aria-labelledby="form-title">
+          <div class="editor-heading">
+            <div>
+              <p class="eyebrow">A little more detail</p>
+              <h2 id="form-title">Add an activity</h2>
+            </div>
+            <span class="editor-icon" aria-hidden="true">+</span>
+          </div>
+          <form id="activity-form" novalidate>
+            <input id="activity-id" name="id" type="hidden">
+            <div class="field">
+              <label for="activity-title">Activity <span aria-hidden="true">*</span></label>
+              <input id="activity-title" name="title" type="text" maxlength="100" required autocomplete="off" placeholder="e.g. Visit the old town">
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label for="activity-date">Date <span aria-hidden="true">*</span></label>
+                <select id="activity-date" name="date" required></select>
+              </div>
+              <div class="field">
+                <label for="activity-time">Start time <span aria-hidden="true">*</span></label>
+                <input id="activity-time" name="startTime" type="time" required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="field">
+                <label for="activity-duration">Duration (hours) <span aria-hidden="true">*</span></label>
+                <input id="activity-duration" name="duration" type="number" min="0.25" max="24" step="0.25" required inputmode="decimal" placeholder="1.5">
+              </div>
+              <div class="field">
+                <label for="activity-location">Location</label>
+                <input id="activity-location" name="location" type="text" maxlength="120" autocomplete="off" placeholder="Neighborhood or address">
+              </div>
+            </div>
+            <div class="field">
+              <label for="activity-notes">Notes</label>
+              <textarea id="activity-notes" name="notes" rows="3" maxlength="1000" placeholder="Reservations, reminders, or details"></textarea>
+            </div>
+            <p id="form-error" class="form-error" role="alert" hidden></p>
+            <div class="form-actions">
+              <button class="button button-primary" id="save-activity" type="submit">Save activity</button>
+              <button class="button button-text" id="cancel-edit" type="button" hidden>Cancel edit</button>
+            </div>
+            <p class="required-note">* Required fields</p>
+          </form>
+        </aside>
+      </section>
+      <section id="print-itinerary" class="print-itinerary" aria-hidden="true"></section>
+      <p class="storage-note" id="storage-note">Changes save automatically in this browser.</p>
+    </div>
+  </main>
+  <footer class="site-footer"><span>TravelTogether</span><span>Made for the miles between here and there.</span></footer>
+</body>
+</html>
