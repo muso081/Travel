@@ -32,7 +32,7 @@ body {
     var(--page);
   color: var(--ink);
   font-family: Inter, "Segoe UI", sans-serif;
-  line-height: 1.5;
+  line-height: 1.65;
   position: relative;
 }
 body::before {
@@ -148,14 +148,15 @@ button, input, select { border-radius: 12px; }
 }
 h1, h2, p { margin-top: 0; }
 h1 {
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.5rem;
   font-size: clamp(2rem, 3vw, 2.8rem);
-  line-height: 1.1;
+  line-height: 1.12;
   letter-spacing: -0.05em;
 }
 h2 {
-  margin-bottom: 0;
+  margin-bottom: 0.35rem;
   font-size: clamp(1.2rem, 2vw, 1.55rem);
+  line-height: 1.25;
 }
 .trip-subtitle { margin: 0; color: var(--muted); }
 .notice {
@@ -368,7 +369,7 @@ h2 {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: rgba(12,18,31,0.72);
-  padding: 12px 14px;
+  padding: 14px 16px;
 }
 .packing-item.packed {
   border-color: rgba(52,211,153,0.28);
@@ -397,13 +398,14 @@ h2 {
   margin: 0;
   font-size: 14px;
   font-weight: 700;
+  line-height: 1.45;
   overflow-wrap: anywhere;
 }
 .item-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 10px;
-  margin-top: 4px;
+  gap: 8px 12px;
+  margin-top: 6px;
   color: var(--muted);
   font-size: 11px;
 }
@@ -488,8 +490,8 @@ h2 {
 .field {
   display: grid;
   min-width: 0;
-  gap: 6px;
-  margin-bottom: 13px;
+  gap: 8px;
+  margin-bottom: 15px;
 }
 .field label, .status-field legend { color: #dfeaf7; font-size: 12px; font-weight: 700; }
 .field label span { color: var(--danger); }
