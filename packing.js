@@ -4,22 +4,23 @@
   const TRIP_KEY = "tp:trip";
   const STORAGE_PREFIX = "tp:packing:";
   const SAMPLE_TRIP = {
-    id: "sample-lisbon",
-    title: "Lisbon Escape",
-    destination: "Lisbon, Portugal",
-    startDate: "2026-11-17",
-    endDate: "2026-11-22",
+    id: "sample-paris",
+    title: "Paris Weekend",
+    destination: "Paris, France",
+    startDate: "2026-12-12",
+    endDate: "2026-12-18",
     currency: "EUR",
     travelers: 2
   };
   const SAMPLE_ITEMS = [
     { id: "sample-pack-1", name: "Passport", category: "documents", quantity: 2, traveler: "Traveler 1", packed: true },
     { id: "sample-pack-2", name: "Flight tickets", category: "documents", quantity: 1, traveler: "Traveler 2", packed: true },
-    { id: "sample-pack-3", name: "Comfortable walking shoes", category: "clothing", quantity: 2, traveler: "Traveler 1", packed: false },
-    { id: "sample-pack-4", name: "Light jacket", category: "clothing", quantity: 1, traveler: "Traveler 2", packed: false },
-    { id: "sample-pack-5", name: "Toothbrush", category: "toiletries", quantity: 2, traveler: "Traveler 1", packed: true },
+    { id: "sample-pack-3", name: "Warm coat", category: "clothing", quantity: 2, traveler: "Traveler 1", packed: false },
+    { id: "sample-pack-4", name: "Walking shoes", category: "clothing", quantity: 2, traveler: "Traveler 2", packed: false },
+    { id: "sample-pack-5", name: "Toiletry pouch", category: "toiletries", quantity: 2, traveler: "Traveler 1", packed: true },
     { id: "sample-pack-6", name: "Phone charger", category: "electronics", quantity: 2, traveler: "Traveler 2", packed: false },
-    { id: "sample-pack-7", name: "Sunscreen", category: "health", quantity: 1, traveler: "Traveler 1", packed: false }
+    { id: "sample-pack-7", name: "Cold medicine", category: "health", quantity: 1, traveler: "Traveler 1", packed: false },
+    { id: "sample-pack-8", name: "Umbrella", category: "other", quantity: 1, traveler: "Traveler 2", packed: false }
   ];
   const CATEGORY_LABELS = {
     documents: "Documents",

@@ -4,20 +4,21 @@
   const TRIP_KEY = "tp:trip";
   const STORAGE_PREFIX = "tp:itinerary:";
   const SAMPLE_TRIP = {
-    id: "sample-lisbon",
-    title: "Lisbon Escape",
-    destination: "Lisbon, Portugal",
-    startDate: "2026-11-17",
-    endDate: "2026-11-22",
+    id: "sample-paris",
+    title: "Paris Weekend",
+    destination: "Paris, France",
+    startDate: "2026-12-12",
+    endDate: "2026-12-18",
     currency: "EUR",
     travelers: 2
   };
   const SAMPLE_ACTIVITIES = [
-    { id: "sample-act-1", title: "Arrival and check-in", date: "2026-11-17", startTime: "15:00", duration: 1.5, location: "Alfama", notes: "Drop bags and rest before sunset walk." },
-    { id: "sample-act-2", title: "Tram 28 ride", date: "2026-11-18", startTime: "09:30", duration: 1.25, location: "Baixa", notes: "Start with the old neighborhoods and coffee stop." },
-    { id: "sample-act-3", title: "Sunset at Miradouro", date: "2026-11-18", startTime: "20:00", duration: 2, location: "Santa Luzia", notes: "Bring a light jacket and camera." },
-    { id: "sample-act-4", title: "Day trip to Sintra", date: "2026-11-19", startTime: "08:45", duration: 7.5, location: "Sintra", notes: "Book tickets ahead for the palace and gardens." },
-    { id: "sample-act-5", title: "Beach afternoon", date: "2026-11-21", startTime: "13:00", duration: 3, location: "Carcavelos Beach", notes: "Pack sunscreen, towels, and water." }
+    { id: "sample-act-1", title: "Check-in and café stroll", date: "2026-12-12", startTime: "15:30", duration: 2, location: "Le Marais", notes: "Settle in and walk the neighborhood before dinner." },
+    { id: "sample-act-2", title: "Eiffel Tower evening", date: "2026-12-13", startTime: "19:00", duration: 2.5, location: "Champ de Mars", notes: "Bring a warm layer and arrive 30 minutes early." },
+    { id: "sample-act-3", title: "Louvre visit", date: "2026-12-14", startTime: "10:00", duration: 4, location: "Louvre Museum", notes: "Focus on the highlights and reserve tickets online." },
+    { id: "sample-act-4", title: "Seine river cruise", date: "2026-12-15", startTime: "20:15", duration: 1.75, location: "Pont Neuf", notes: "Great option for sunset views and photos." },
+    { id: "sample-act-5", title: "Montmartre walk", date: "2026-12-16", startTime: "11:00", duration: 3, location: "Montmartre", notes: "Stop for pastries and browse the artist streets." },
+    { id: "sample-act-6", title: "Market morning", date: "2026-12-17", startTime: "08:30", duration: 1.5, location: "Rue Cler", notes: "Pick up breakfast and coffee for the day." }
   ];
   const elements = {
     app: document.getElementById("itinerary-app"),
