@@ -7,8 +7,8 @@
     id: "sample-lisbon",
     title: "Lisbon Escape",
     destination: "Lisbon, Portugal",
-    startDate: "2026-06-14",
-    endDate: "2026-06-18",
+    startDate: "2026-11-17",
+    endDate: "2026-11-22",
     currency: "EUR",
     travelers: 2
   };
