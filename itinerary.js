@@ -57,7 +57,8 @@
     importButton: document.getElementById("import-button"),
     importFile: document.getElementById("import-file"),
     exportButton: document.getElementById("export-button"),
-    printButton: document.getElementById("print-button")
+    printButton: document.getElementById("print-button"),
+    quickAdd: document.getElementById("quick-add-activity")
   };
 
   let trip = null;
@@ -270,6 +271,13 @@
     return button;
   }
 
+  function focusActivityForm() {
+    if (!tripDays.length) return;
+    elements.date.value = selectedDate;
+    elements.title.focus();
+    elements.form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
   function renderTabs() {
     elements.dayTabs.replaceChildren();
     tripDays.forEach((date, index) => {
@@ -318,8 +326,10 @@
   }
 
   function createEmptyDay() {
-    const wrapper = document.createElement("div");
+    const wrapper = document.createElement("button");
+    wrapper.type = "button";
     wrapper.className = "empty-day";
+    wrapper.setAttribute("aria-label", "Add activity for this day");
     const mark = document.createElement("span");
     mark.className = "empty-day-mark";
     mark.setAttribute("aria-hidden", "true");
@@ -328,6 +338,7 @@
     heading.textContent = "Nothing on the schedule yet";
     const message = document.createElement("p");
     message.textContent = "Add an activity to give this day a starting point.";
+    wrapper.addEventListener("click", () => focusActivityForm());
     wrapper.append(mark, heading, message);
     return wrapper;
   }
@@ -654,6 +665,13 @@
     elements.importFile.addEventListener("change", () => importItinerary(elements.importFile.files[0]));
     elements.exportButton.addEventListener("click", exportItinerary);
     elements.printButton.addEventListener("click", () => window.print());
+    if (elements.quickAdd) {
+      elements.quickAdd.addEventListener("click", () => {
+        elements.date.value = selectedDate;
+        elements.title.focus();
+        elements.form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+    }
   }
 
   initialize();
