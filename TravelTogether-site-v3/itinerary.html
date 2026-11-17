@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#f8fafc">
+    <meta name="description" content="Plan each day of your trip with a timeline, overlap warnings and printable schedule.">
+    <title>Itinerary · TravelTogether</title>
+    <link rel="icon" type="image/svg+xml" href="./logo.svg">
+    <link rel="stylesheet" href="./itinerary.css">
+    <script>(function () {
+  var theme = null;
+  try { theme = window.localStorage.getItem("tp:theme"); } catch (error) {}
+  if (theme !== "light" && theme !== "dark") {
+    theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  document.documentElement.setAttribute("data-theme", theme);
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", theme === "dark" ? "#060b18" : "#f8fafc");
+})();</script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="./index.html"><img src="./logo.svg" alt="" width="34" height="34"><span>TravelTogether</span></a>
+        <nav class="primary-nav" aria-label="Primary">
+          <a href="./index.html">Explore</a>
+          <a href="./itinerary.html" aria-current="page">Itinerary</a>
+          <a href="./budget.html">Budget</a>
+          <a href="./packing.html">Packing</a>
+        </nav>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch theme" title="Switch theme">
+          <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>
+        </button>
+      </div>
+    </header>
+    <main id="main" class="page-shell" tabindex="-1">
+      <div class="notice" id="notice" hidden>
+        <p class="notice-text"></p>
+        <button class="icon-button" id="notice-close" type="button" aria-label="Dismiss message"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
+      </div>
+
+      <noscript>
+        <p class="notice" data-kind="warning"><span class="notice-text">The itinerary needs JavaScript to load and save your plan. Please turn it on and reload.</span></p>
+      </noscript>
+
+      <section id="no-trip" class="empty-trip" aria-labelledby="no-trip-title" hidden>
+        <svg viewBox="0 0 168 120" aria-hidden="true" focusable="false">
+        <ellipse cx="82" cy="110" rx="56" ry="6" style="fill:var(--surface-3)"/>
+        <path d="M14 74C30 40 92 28 128 46" style="fill:none;stroke:var(--line-strong);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:1 8"/>
+        <path d="M148 18c0 12-12 24-12 24s-12-12-12-24a12 12 0 0 1 24 0z" style="fill:var(--teal)"/>
+        <circle cx="136" cy="18" r="4.6" style="fill:var(--surface)"/>
+        <path d="M66 50v-9a7 7 0 0 1 7-7h18a7 7 0 0 1 7 7v9" style="fill:none;stroke:var(--line-strong);stroke-width:4;stroke-linecap:round"/>
+        <rect x="40" y="48" width="84" height="58" rx="12" style="fill:var(--teal-soft);stroke:var(--teal);stroke-width:3"/>
+        <path d="M62 48v58M102 48v58" style="fill:none;stroke:var(--teal);stroke-width:3;opacity:.4"/>
+        <rect x="72" y="66" width="20" height="24" rx="4" style="fill:var(--surface);stroke:var(--line-strong);stroke-width:2"/>
+        <path d="M77 74h10M77 80h6" style="fill:none;stroke:var(--line-strong);stroke-width:2;stroke-linecap:round"/>
+      </svg>
+        <h1 id="no-trip-title">No trip to plan yet</h1>
+        <p id="no-trip-text">Choose a destination and dates on Explore and your itinerary will be ready here.</p>
+        <a class="button button-primary" href="./index.html">Create a trip first</a>
+      </section>
+
+      <div id="itinerary-app" hidden>
+        <div class="page-heading">
+          <div>
+            <h1 id="page-title">Itinerary</h1>
+            <p class="lede">Plan each day, spot clashes before they happen, and print a copy for the trip.</p>
+          </div>
+          <div class="toolbar" role="group" aria-label="Itinerary tools">
+            <button class="button button-primary" type="button" id="jump-add"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 4v12M4 10h12"/></svg>Add activity</button>
+            <button class="button button-secondary" type="button" id="import-button"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 13V3M6.5 6.5L10 3l3.5 3.5M4 12.5v3h12v-3"/></svg>Import</button>
+            <input id="import-file" type="file" accept="application/json,.json" hidden>
+            <button class="button button-secondary" type="button" id="export-button"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 3v10M6.5 9.5L10 13l3.5-3.5M4 12.5v3h12v-3"/></svg>Export</button>
+            <button class="button button-secondary" type="button" id="print-button"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 7V3h10v4M5 14H3V8h14v6h-2M5 11h10v6H5z"/></svg>Print</button>
+          </div>
+        </div>
+
+        <section class="trip-strip" aria-label="Active trip">
+          <dl class="trip-facts">
+            <div class="trip-detail"><dt>Trip</dt><dd data-trip="title"></dd><dd data-trip="destination"></dd></div>
+            <div class="trip-detail"><dt>Dates</dt><dd data-trip="dates"></dd><dd><span data-trip="length"></span> <span class="badge trip-when" data-trip="when"></span></dd></div>
+            <div class="trip-detail"><dt>Travelers</dt><dd data-trip="travelers"></dd><dd data-trip="currency"></dd></div>
+          </dl>
+          <div class="trip-strip-action"><a class="button button-text button-small" href="./index.html#trips">Change trip</a></div>
+        </section>
+
+        <div class="content-grid">
+          <div class="stack">
+            <section class="panel" aria-labelledby="schedule-title">
+              <div class="panel-head">
+                <div>
+                  <h2 id="schedule-title">Daily schedule</h2>
+                  <p id="trip-total"></p>
+                </div>
+              </div>
+              <div class="day-tabs" id="day-tabs" role="tablist" aria-label="Trip days"></div>
+              <div class="day-panel" id="day-panel" role="tabpanel" tabindex="0">
+                <div class="day-head">
+                  <div>
+                    <p class="day-kicker" id="selected-day-label"></p>
+                    <h3 id="selected-day-date" tabindex="-1"></h3>
+                  </div>
+                  <p class="day-summary" id="day-summary"></p>
+                </div>
+                <div class="day-tools" id="day-tools" hidden>
+                  <button class="button button-ghost button-small" type="button" id="sort-day">Sort this day by start time</button>
+                </div>
+                <div class="day-ribbon" id="day-ribbon" aria-hidden="true" hidden></div>
+                <ol class="activity-list" id="activity-list" aria-label="Activities for the selected day"></ol>
+                <div class="empty-state" id="empty-day" hidden>
+                  <strong>Nothing planned for this day yet</strong>
+                  <span>Add an activity to give it a starting point.</span>
+                  <button class="button button-secondary" type="button" id="empty-add">Add an activity</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel outside-panel" id="outside-section" aria-labelledby="outside-title" hidden>
+              <div class="panel-head">
+                <div>
+                  <h2 id="outside-title" tabindex="-1">Outside the trip dates <span class="count-badge" id="outside-count">0</span></h2>
+                  <p>These are still saved. Edit one to move it to a day of the trip, or delete it.</p>
+                </div>
+              </div>
+              <ol class="activity-list" id="outside-list" aria-label="Activities outside the trip dates"></ol>
+            </section>
+          </div>
+
+          <aside class="editor-column" aria-labelledby="form-title">
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2 id="form-title" tabindex="-1">Add an activity</h2>
+                  <p id="form-sub">It joins the selected day in time order.</p>
+                </div>
+              </div>
+              <form id="activity-form" novalidate autocomplete="off" aria-labelledby="form-title">
+                <p class="form-error" id="form-error" role="alert" hidden></p>
+                <div class="field">
+                  <label for="activity-title">Activity <span class="req" aria-hidden="true">*</span></label>
+                  <input id="activity-title" type="text" maxlength="100" required placeholder="Visit the old town" aria-describedby="activity-title-error">
+                  <p class="field-error" id="activity-title-error" role="alert" hidden></p>
+                </div>
+                <div class="form-row">
+                  <div class="field">
+                    <label for="activity-date">Day <span class="req" aria-hidden="true">*</span></label>
+                    <select id="activity-date" required aria-describedby="activity-date-error"></select>
+                    <p class="field-error" id="activity-date-error" role="alert" hidden></p>
+                  </div>
+                  <div class="field">
+                    <label for="activity-time">Start time <span class="req" aria-hidden="true">*</span></label>
+                    <input id="activity-time" type="time" required aria-describedby="activity-time-error">
+                    <p class="field-error" id="activity-time-error" role="alert" hidden></p>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="field">
+                    <label for="activity-duration">Duration in hours <span class="req" aria-hidden="true">*</span></label>
+                    <input id="activity-duration" type="number" min="0.25" max="24" step="0.25" inputmode="decimal" required placeholder="1.5" aria-describedby="activity-duration-hint activity-duration-error">
+                    <p class="field-hint" id="activity-duration-hint">1.5 = 1 hour 30 min</p>
+                    <p class="field-error" id="activity-duration-error" role="alert" hidden></p>
+                  </div>
+                  <div class="field">
+                    <label for="activity-location">Location</label>
+                    <input id="activity-location" type="text" maxlength="120" placeholder="Optional" aria-describedby="activity-location-error">
+                    <p class="field-error" id="activity-location-error" role="alert" hidden></p>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="activity-notes">Notes</label>
+                  <textarea id="activity-notes" rows="3" maxlength="1000" placeholder="Reservations, reminders, details" aria-describedby="activity-notes-error"></textarea>
+                  <p class="field-error" id="activity-notes-error" role="alert" hidden></p>
+                </div>
+                <div class="form-actions">
+                  <button class="button button-primary" id="save-activity" type="submit">Add activity</button>
+                  <button class="button button-secondary" id="cancel-edit" type="button" hidden>Cancel editing</button>
+                </div>
+                <p class="required-note"><span class="req" aria-hidden="true">*</span> Required</p>
+                <p class="form-status" id="form-status" role="status"></p>
+              </form>
+            </div>
+          </aside>
+        </div>
+
+        <section class="print-itinerary" id="print-itinerary" aria-label="Printable itinerary"></section>
+        <p class="storage-note" id="storage-note">Changes save automatically in this browser.</p>
+      </div>
+    </main>
+    <div id="live" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+    <footer class="site-footer">
+      <span>Made for the miles between here and there.</span>
+      <span>Your plans stay in this browser. Nothing is uploaded.</span>
+    </footer>
+    <script src="./itinerary.js"></script>
+  </body>
+</html>

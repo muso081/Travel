@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#f8fafc">
+    <meta name="description" content="Browse destinations with sample daily costs, then create the trip your itinerary, budget and packing list will share.">
+    <title>Explore destinations · TravelTogether</title>
+    <link rel="icon" type="image/svg+xml" href="./logo.svg">
+    <link rel="stylesheet" href="./destinations.css">
+    <script>(function () {
+  var theme = null;
+  try { theme = window.localStorage.getItem("tp:theme"); } catch (error) {}
+  if (theme !== "light" && theme !== "dark") {
+    theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  document.documentElement.setAttribute("data-theme", theme);
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", theme === "dark" ? "#060b18" : "#f8fafc");
+})();</script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="./index.html"><img src="./logo.svg" alt="" width="34" height="34"><span>TravelTogether</span></a>
+        <nav class="primary-nav" aria-label="Primary">
+          <a href="./index.html" aria-current="page">Explore</a>
+          <a href="./itinerary.html">Itinerary</a>
+          <a href="./budget.html">Budget</a>
+          <a href="./packing.html">Packing</a>
+        </nav>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch theme" title="Switch theme">
+          <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>
+        </button>
+      </div>
+    </header>
+    <main id="main" class="page-shell" tabindex="-1">
+      <div class="notice" id="notice" hidden>
+        <p class="notice-text"></p>
+        <button class="icon-button" id="notice-close" type="button" aria-label="Dismiss message"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
+      </div>
+
+      <noscript>
+        <p class="notice" data-kind="warning"><span class="notice-text">TravelTogether needs JavaScript to browse destinations and save trips. Please turn it on and reload.</span></p>
+      </noscript>
+
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <h1 id="hero-title">Plan the trip <em>together</em>.</h1>
+          <p class="lede">Pick a place, set the dates, then keep your itinerary, budget and packing list in one shared plan. It all stays in this browser, so there is nothing to sign up for.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#destinations" data-jump>Browse destinations</a>
+            <a class="button button-secondary" href="#trip-form" data-jump>Create a trip</a>
+          </div>
+        </div>
+        <div id="active-trip"></div>
+      </section>
+
+      <section class="section" id="destinations" aria-labelledby="destinations-title">
+        <div class="section-head">
+          <h2 id="destinations-title" tabindex="-1">Where to?</h2>
+          <p class="lede" id="dest-lede">Places to start from. Sample daily costs are rounded, illustrative figures in each place's own currency, not live prices.</p>
+        </div>
+
+        <form class="filters panel" id="filters" role="search" aria-label="Filter destinations">
+          <div class="filter-row">
+            <div class="field">
+              <label for="search">Search</label>
+              <input id="search" type="search" placeholder="City, country or activity" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="region">Region</label>
+              <select id="region"><option value="all">All regions</option></select>
+            </div>
+          </div>
+          <fieldset>
+            <legend>Activity</legend>
+            <div class="choice-group" id="activity-group"></div>
+          </fieldset>
+          <div class="results-bar">
+            <p id="results-count" role="status"></p>
+            <button class="button button-text button-small" type="button" id="clear-filters" hidden>Clear filters</button>
+          </div>
+        </form>
+
+        <ul class="dest-grid" id="dest-grid" role="list" aria-label="Destinations"></ul>
+        <div class="empty-state" id="dest-empty" hidden>
+          <strong>No destinations match</strong>
+          <span id="dest-empty-text">Try a different word, or clear the filters.</span>
+          <button class="button button-secondary" type="button" id="dest-empty-clear">Clear filters</button>
+        </div>
+      </section>
+
+      <section class="section" id="trips" aria-labelledby="trips-title">
+        <div class="section-head">
+          <h2 id="trips-title" tabindex="-1">Your trips</h2>
+          <p class="lede">Create a trip once and the Itinerary, Budget and Packing pages all use it.</p>
+        </div>
+
+        <div class="content-grid">
+          <div class="panel" id="trip-panel">
+            <div class="panel-head">
+              <div>
+                <h3 id="form-title" tabindex="-1">Create a trip</h3>
+                <p id="form-sub">Start from a destination above, or type your own.</p>
+              </div>
+            </div>
+
+            <div class="form-success" id="form-success" role="status" tabindex="-1" hidden>
+              <p id="form-success-text"></p>
+              <div class="form-success-links" id="form-success-links">
+                <a href="./itinerary.html">Plan the itinerary</a>
+                <a href="./budget.html">Set a budget</a>
+                <a href="./packing.html">Start packing</a>
+                <button class="button button-secondary button-small" type="button" id="make-active" hidden>Make this the active trip</button>
+              </div>
+            </div>
+
+            <form id="trip-form" novalidate autocomplete="off" aria-labelledby="form-title">
+              <p class="form-error" id="form-error" role="alert" hidden></p>
+
+              <div class="field">
+                <label for="trip-title">Trip name <span class="req" aria-hidden="true">*</span></label>
+                <input id="trip-title" name="title" type="text" maxlength="80" required aria-describedby="trip-title-error">
+                <p class="field-error" id="trip-title-error" role="alert" hidden></p>
+              </div>
+
+              <div class="field">
+                <label for="trip-destination">Destination <span class="req" aria-hidden="true">*</span></label>
+                <input id="trip-destination" name="destination" type="text" maxlength="100" required list="destination-options" aria-describedby="trip-destination-hint trip-destination-error">
+                <datalist id="destination-options"></datalist>
+                <p class="field-hint" id="trip-destination-hint">Pick a suggestion or type any place.</p>
+                <p class="field-error" id="trip-destination-error" role="alert" hidden></p>
+              </div>
+
+              <div class="form-row">
+                <div class="field">
+                  <label for="trip-start">Start date <span class="req" aria-hidden="true">*</span></label>
+                  <input id="trip-start" name="startDate" type="date" min="1900-01-01" max="2100-12-31" required aria-describedby="trip-start-error">
+                  <p class="field-error" id="trip-start-error" role="alert" hidden></p>
+                </div>
+                <div class="field">
+                  <label for="trip-end">End date <span class="req" aria-hidden="true">*</span></label>
+                  <input id="trip-end" name="endDate" type="date" min="1900-01-01" max="2100-12-31" required aria-describedby="trip-end-hint trip-end-error">
+                  <p class="field-hint" id="trip-end-hint">Up to 90 days.</p>
+                  <p class="field-error" id="trip-end-error" role="alert" hidden></p>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="field">
+                  <label for="trip-travelers">Travelers <span class="req" aria-hidden="true">*</span></label>
+                  <input id="trip-travelers" name="travelers" type="number" inputmode="numeric" min="1" max="20" step="1" value="2" required aria-describedby="trip-travelers-error">
+                  <p class="field-error" id="trip-travelers-error" role="alert" hidden></p>
+                </div>
+                <div class="field">
+                  <label for="trip-currency">Budget currency <span class="req" aria-hidden="true">*</span></label>
+                  <select id="trip-currency" name="currency" aria-describedby="trip-currency-hint trip-currency-error"></select>
+                  <p class="field-hint" id="trip-currency-hint">Choose carefully: it can't change once the trip is saved.</p>
+                  <p class="field-error" id="trip-currency-error" role="alert" hidden></p>
+                </div>
+              </div>
+
+              <p class="estimate" id="estimate" hidden></p>
+
+              <div class="form-actions">
+                <button class="button button-primary" id="save-trip" type="submit">Save trip</button>
+                <button class="button button-secondary" id="reset-form" type="button">Clear form</button>
+              </div>
+              <p class="required-note"><span class="req" aria-hidden="true">*</span> Required</p>
+            </form>
+          </div>
+
+          <div class="stack">
+            <section class="panel" id="saved-trips" aria-labelledby="saved-title">
+              <div class="panel-head">
+                <h3 id="saved-title" tabindex="-1">Saved trips <span class="count-badge" id="trip-count">0</span></h3>
+              </div>
+              <ul class="trip-list" id="trip-list" role="list"></ul>
+              <div class="empty-state" id="trip-empty">
+                <strong>No saved trips yet</strong>
+                <span>Fill in the form to create your first one.</span>
+              </div>
+            </section>
+            <p class="storage-note">Trips are kept in this browser only. Clearing site data removes them.</p>
+          </div>
+        </div>
+      </section>
+
+      <dialog class="dialog dialog-wide" id="detail-dialog" aria-labelledby="detail-title">
+        <div class="detail">
+          <div class="detail-scene" id="detail-scene"></div>
+          <button class="icon-button detail-close" id="detail-close" type="button" aria-label="Close details"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
+          <div class="detail-body">
+            <header>
+              <h2 id="detail-title"></h2>
+              <p class="muted" id="detail-sub"></p>
+            </header>
+            <p id="detail-blurb"></p>
+            <div class="detail-columns">
+              <section aria-labelledby="detail-hl-title">
+                <h3 id="detail-hl-title">Highlights</h3>
+                <ul class="check-list" id="detail-highlights" role="list"></ul>
+              </section>
+              <section aria-labelledby="detail-facts-title">
+                <h3 id="detail-facts-title">Good to know</h3>
+                <dl class="facts" id="detail-facts"></dl>
+              </section>
+            </div>
+            <section aria-labelledby="detail-cost-title">
+              <h3 id="detail-cost-title">Sample daily costs</h3>
+              <p class="muted" id="detail-cost-note"></p>
+              <table class="cost-table">
+                <caption class="visually-hidden" id="detail-cost-caption"></caption>
+                <thead><tr><th scope="col">Per person, per day</th><th scope="col">Sample amount</th></tr></thead>
+                <tbody id="detail-cost-rows"></tbody>
+                <tfoot><tr><th scope="row">Estimated total</th><td id="detail-cost-total"></td></tr></tfoot>
+              </table>
+            </section>
+            <div class="dialog-actions">
+              <button class="button button-secondary" type="button" id="detail-dismiss">Close</button>
+              <button class="button button-primary" type="button" id="detail-plan">Plan a trip</button>
+            </div>
+          </div>
+        </div>
+      </dialog>
+    </main>
+    <div id="live" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+    <footer class="site-footer">
+      <span>Made for the miles between here and there.</span>
+      <span>Your plans stay in this browser. Nothing is uploaded.</span>
+    </footer>
+    <script src="./destinations.js"></script>
+  </body>
+</html>
