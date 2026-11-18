@@ -201,6 +201,8 @@
               <h2 id="detail-title"></h2>
               <p class="muted" id="detail-sub"></p>
             </header>
+            <div class="detail-layout">
+            <div class="detail-main">
             <p id="detail-blurb"></p>
             <div class="detail-columns">
               <section aria-labelledby="detail-hl-title">
@@ -222,9 +224,57 @@
                 <tfoot><tr><th scope="row">Estimated total</th><td id="detail-cost-total"></td></tr></tfoot>
               </table>
             </section>
+            </div>
+            <aside class="price-box" aria-labelledby="price-title">
+              <p class="price-kicker" id="price-title">Plans from</p>
+              <div class="price-main">
+                <p class="price-amount"><span id="price-from"></span> <small>per person</small></p>
+                <p class="price-note" id="price-note"></p>
+                <ul class="price-includes" id="price-includes" role="list"></ul>
+                <button class="button button-primary price-cta" id="plans-open" type="button" aria-expanded="false" aria-controls="detail-plans">Other plans</button>
+              </div>
+            </aside>
+            </div>
+            <section class="plans" id="detail-plans" aria-labelledby="plans-title" hidden>
+              <div class="plans-head">
+                <h3 id="plans-title" tabindex="-1">Choose a plan</h3>
+                <p class="muted">Cheapest first. Sample prices for planning, not live fares. Choosing a plan creates the trip with its itinerary and budget filled in.</p>
+              </div>
+              <ol class="plan-list" id="plan-list" aria-label="Plans, cheapest first"></ol>
+              <form class="plan-book" id="plan-book" novalidate hidden aria-labelledby="book-title">
+                <h4 id="book-title" tabindex="-1"></h4>
+                <p class="muted" id="book-summary"></p>
+                <div class="book-fields">
+                  <div class="field">
+                    <label for="book-start">Start date</label>
+                    <input id="book-start" name="start" type="date" required aria-describedby="book-start-error">
+                    <p class="field-error" id="book-start-error" hidden></p>
+                  </div>
+                  <div class="field">
+                    <label for="book-travelers">Travelers</label>
+                    <input id="book-travelers" name="travelers" type="number" min="1" max="20" step="1" inputmode="numeric" required aria-describedby="book-travelers-error">
+                    <p class="field-error" id="book-travelers-error" hidden></p>
+                  </div>
+                </div>
+                <p class="book-total" id="book-total" aria-live="polite"></p>
+                <div class="book-actions">
+                  <button class="button button-secondary" type="button" id="book-back">Back to plans</button>
+                  <button class="button button-primary" type="submit" id="book-create">Create my trip</button>
+                </div>
+              </form>
+              <div class="plan-done" id="plan-done" hidden>
+                <h4 id="done-title" tabindex="-1"></h4>
+                <p id="done-text"></p>
+                <div class="done-links">
+                  <a class="button button-primary" href="./itinerary.html">Open itinerary</a>
+                  <a class="button button-secondary" href="./budget.html">Open budget</a>
+                  <a class="button button-secondary" href="./packing.html">Packing list</a>
+                </div>
+              </div>
+            </section>
             <div class="dialog-actions">
               <button class="button button-secondary" type="button" id="detail-dismiss">Close</button>
-              <button class="button button-primary" type="button" id="detail-plan">Plan a trip</button>
+              <button class="button button-secondary" type="button" id="detail-plan">Plan a trip</button>
             </div>
           </div>
         </div>

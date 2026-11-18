@@ -1231,7 +1231,11 @@
       rows.append(tr);
     });
     $("detail-cost-total").textContent = money(dailyTotal(dest), dest.currency);
-    $("detail-plan").textContent = "Plan a trip to " + dest.name;
+    $("detail-plan").textContent = "Plan it myself";
+    plan.dest = dest;
+    plan.tier = null;
+    renderPriceBox(dest);
+    resetPlans();
 
     if (typeof dialog.showModal === "function") dialog.showModal();
     else dialog.setAttribute("open", "");
@@ -1241,6 +1245,250 @@
     const dialog = $("detail-dialog");
     if (typeof dialog.close === "function") dialog.close();
     else dialog.removeAttribute("open");
+  }
+
+
+  /* ======================================================================
+     Plans: sample packages, cheapest first. Choosing one creates a new trip
+     and fills in its itinerary and budget in one step. Prices are rough
+     samples built from the destination's daily costs, never live fares.
+     Explore writes the itinerary and budget keys only for the brand-new
+     trip it has just created, in exactly the formats those pages save.
+     ====================================================================== */
+  const TIERS = [
+    { id: "saver", name: "Saver", length: "min", stay: 0.6, food: 0.7, transport: 1, fun: 0.5, flight: 3, flightLabel: "Economy flights", stayLabel: "Guesthouse room", busy: false, extras: [] },
+    { id: "classic", name: "Classic", length: "mid", stay: 1, food: 1, transport: 1, fun: 1, flight: 4, flightLabel: "Economy flights with a checked bag", stayLabel: "3-star hotel", busy: false, extras: ["Guided walking tour"] },
+    { id: "comfort", name: "Comfort", length: "max", stay: 1.6, food: 1.4, transport: 1.3, fun: 1.6, flight: 6, flightLabel: "Premium economy flights", stayLabel: "4-star hotel", busy: true, extras: ["Guided day trip"], transfer: true },
+    { id: "luxury", name: "Luxury", length: "max", stay: 3, food: 2.2, transport: 2, fun: 2.6, flight: 12, flightLabel: "Business class flights", stayLabel: "5-star hotel", busy: true, extras: ["Private guide for the day", "Spa afternoon"], transfer: true }
+  ];
+  const plan = { dest: null, tier: null };
+
+  function stayRange(dest) {
+    const match = /(\d+)\s*to\s*(\d+)/.exec(dest.idealStay || "");
+    const low = match ? Number(match[1]) : 4;
+    const high = match ? Number(match[2]) : 6;
+    return { min: Math.max(2, low), mid: Math.max(2, Math.round((low + high) / 2)), max: Math.max(2, high) };
+  }
+  function tierDays(dest, tier) { return stayRange(dest)[tier.length]; }
+  function currencyDigits(code) {
+    try { return new Intl.NumberFormat("en", { style: "currency", currency: code }).resolvedOptions().maximumFractionDigits; }
+    catch (error) { return 2; }
+  }
+  /* Cost for one traveler, in whole units of the destination's currency. */
+  function planCost(dest, tier) {
+    const days = tierDays(dest, tier);
+    const c = dest.costs;
+    const per = {
+      flight: Math.round(dailyTotal(dest) * tier.flight),
+      stayNight: Math.round(c.stay * tier.stay),
+      foodDay: Math.round(c.food * tier.food),
+      transportDay: Math.round(c.transport * tier.transport),
+      funDay: Math.round(c.activities * tier.fun)
+    };
+    const parts = {
+      flight: per.flight,
+      stay: per.stayNight * (days - 1),
+      food: per.foodDay * days,
+      transport: per.transportDay * days,
+      fun: per.funDay * days
+    };
+    const subtotal = parts.flight + parts.stay + parts.food + parts.transport + parts.fun;
+    parts.insurance = Math.round(subtotal * 0.04);
+    return { days, nights: days - 1, per, parts, total: subtotal + parts.insurance };
+  }
+  function plansFor(dest) {
+    return TIERS.map((tier) => ({ tier, cost: planCost(dest, tier) })).sort((a, b) => a.cost.total - b.cost.total);
+  }
+  function planIncludes(tier, cost) {
+    return [
+      tier.flightLabel + ", there and back",
+      tier.stayLabel + ", " + plural(cost.nights, "night", "nights"),
+      tier.busy ? "Two sights a day" : "One sight a day, free afternoons",
+      "Meals, local transport and travel insurance"
+    ].concat(tier.extras, tier.transfer ? ["Airport transfers"] : []);
+  }
+
+  function addDaysKey(key, count) {
+    const date = parseDate(key);
+    date.setDate(date.getDate() + count);
+    return dateKey(date);
+  }
+
+  function buildPlanTrip(dest, tier, startDate, travelers) {
+    const cost = planCost(dest, tier);
+    const endDate = addDaysKey(startDate, cost.days - 1);
+    const days = daysBetween(startDate, endDate);
+    const trip = { id: makeId("trip"), title: dest.name + " · " + tier.name, destination: destinationLabel(dest), startDate, endDate, currency: dest.currency, travelers };
+
+    const activities = [];
+    const act = (date, startTime, duration, title, location, notes) => activities.push({ id: makeId("act"), title, date, startTime, duration, location: location || "", notes: notes || "" });
+    let next = 0;
+    const sight = () => dest.highlights[next++ % dest.highlights.length];
+    const extras = tier.extras.slice();
+    const middle = days.slice(1, -1);
+    days.forEach((date, index) => {
+      if (index === 0) {
+        act(date, "08:00", 4, "Flight to " + dest.name, dest.name + " airport", tier.flightLabel + ". Sample time: change it to your real booking.");
+        act(date, "12:30", 1, tier.transfer ? "Private transfer to the hotel" : "Get to the hotel", dest.name, "");
+        act(date, "14:00", 1, "Check in: " + tier.stayLabel, dest.name, "");
+        if (!middle.length && extras.length) act(date, "16:00", 2, extras.shift(), dest.name, "Included in the " + tier.name + " plan.");
+        act(date, "19:30", 1.5, "Welcome dinner", dest.name, "");
+      } else if (index === days.length - 1) {
+        act(date, "09:00", 0.5, "Check out", dest.name, "");
+        act(date, "10:00", 2, "Last walk and souvenirs", dest.name, "");
+        act(date, "15:00", 4, "Flight home", dest.name + " airport", tier.flightLabel + ". Be at the airport two hours before.");
+      } else {
+        act(date, "09:30", 2.5, sight(), dest.name, "");
+        act(date, "13:00", 1, "Lunch", dest.name, "");
+        act(date, "15:00", 2.5, tier.busy ? sight() : "Free time to explore", dest.name, "");
+        if (extras.length) act(date, "17:45", 1.5, extras.shift(), dest.name, "Included in the " + tier.name + " plan.");
+        act(date, "19:30", 1.5, "Dinner", dest.name, "");
+      }
+    });
+
+    const factor = Math.pow(10, currencyDigits(dest.currency));
+    const expenses = [];
+    const spend = (description, category, date, major) => {
+      const amountMinor = Math.round(major * travelers * factor);
+      if (amountMinor > 0) expenses.push({ id: makeId("exp"), description, amountMinor, category, date, status: "planned" });
+    };
+    const who = travelers === 1 ? "" : " (" + plural(travelers, "traveler", "travelers") + ")";
+    spend(tier.flightLabel + ", round trip" + who, "transport", startDate, cost.parts.flight);
+    spend(tier.stayLabel + ", " + plural(cost.nights, "night", "nights") + who, "accommodation", startDate, cost.parts.stay);
+    spend("Local transport" + who, "transport", startDate, cost.parts.transport);
+    spend("Travel insurance" + who, "other", startDate, cost.parts.insurance);
+    days.forEach((date) => {
+      const label = formatDate(date, { weekday: "short", month: "short", day: "numeric" });
+      spend("Meals, " + label, "food", date, cost.per.foodDay);
+      spend("Sights and activities, " + label, "activities", date, cost.per.funDay);
+    });
+    const spent = expenses.reduce((sum, expense) => sum + expense.amountMinor, 0);
+    const budget = { version: 1, currency: dest.currency, totalBudgetMinor: Math.ceil(spent * 1.1 / factor) * factor, expenses };
+    return { trip, itinerary: { version: 1, activities }, budget, spent: spent / factor };
+  }
+
+  function createFromPlan(dest, tier, startDate, travelers) {
+    const built = buildPlanTrip(dest, tier, startDate, travelers);
+    const keys = ["tp:itinerary:" + built.trip.id, "tp:budget:" + built.trip.id];
+    const previous = state.trips;
+    state.trips = [built.trip].concat(previous);
+    const ok = storageSet(keys[0], JSON.stringify(built.itinerary)) && storageSet(keys[1], JSON.stringify(built.budget)) && saveTrips() && writeActive(built.trip);
+    if (!ok) {
+      keys.forEach(storageRemove);
+      state.trips = previous;
+      saveTrips();
+      return null;
+    }
+    state.activeId = built.trip.id;
+    state.activeStatus = "ok";
+    renderActive();
+    renderTrips();
+    return built;
+  }
+
+  function renderPriceBox(dest) {
+    const list = plansFor(dest);
+    const cheapest = list[0];
+    $("price-from").textContent = money(cheapest.cost.total, dest.currency);
+    $("price-note").textContent = cheapest.tier.name + " plan, " + plural(cheapest.cost.days, "day", "days") + ". Sample price, not a live fare.";
+    const includes = $("price-includes");
+    includes.replaceChildren();
+    planIncludes(cheapest.tier, cheapest.cost).slice(0, 3).forEach((text) => includes.append(el("li", "", text)));
+    const listNode = $("plan-list");
+    listNode.replaceChildren();
+    list.forEach(({ tier, cost }, index) => {
+      const card = el("li", "plan-card");
+      card.dataset.tier = tier.id;
+      const info = el("div", "plan-info");
+      const name = el("h4", "plan-name", tier.name);
+      if (index === 0) name.append(el("span", "badge badge-teal", "Lowest price"));
+      const items = el("ul", "plan-includes");
+      items.setAttribute("role", "list");
+      planIncludes(tier, cost).forEach((text) => items.append(el("li", "", text)));
+      info.append(name, el("p", "plan-meta", plural(cost.days, "day", "days") + " · " + plural(cost.nights, "night", "nights")), items);
+      const price = el("div", "plan-price");
+      const choose = button("Choose " + tier.name, "button button-primary");
+      choose.dataset.plan = tier.id;
+      price.append(el("b", "", money(cost.total, dest.currency)), el("span", "", "per person"), el("span", "plan-pair", money(cost.total * 2, dest.currency) + " for 2 travelers"), choose);
+      card.append(info, price);
+      listNode.append(card);
+    });
+  }
+
+  function resetPlans() {
+    $("detail-plans").hidden = true;
+    $("plans-open").setAttribute("aria-expanded", "false");
+    $("plans-open").textContent = "Other plans";
+    $("plan-list").hidden = false;
+    $("plan-book").hidden = true;
+    $("plan-done").hidden = true;
+  }
+  function togglePlans() {
+    const open = $("detail-plans").hidden;
+    resetPlans();
+    if (!open) return;
+    $("detail-plans").hidden = false;
+    $("plans-open").setAttribute("aria-expanded", "true");
+    $("plans-open").textContent = "Hide plans";
+    $("plans-title").scrollIntoView({ block: "start", behavior: reduceMotion() ? "auto" : "smooth" });
+    $("plans-title").focus({ preventScroll: true });
+  }
+  function setBookError(id, message) {
+    const input = $(id);
+    const error = $(id + "-error");
+    error.textContent = message;
+    error.hidden = !message;
+    if (message) input.setAttribute("aria-invalid", "true");
+    else input.removeAttribute("aria-invalid");
+  }
+  function updateBookTotal() {
+    if (!plan.tier) return;
+    const count = Number($("book-travelers").value);
+    const cost = planCost(plan.dest, plan.tier);
+    $("book-total").textContent = Number.isInteger(count) && count >= 1 && count <= MAX_TRAVELERS
+      ? "Total: " + money(cost.total * count, plan.dest.currency) + " for " + plural(count, "traveler", "travelers") + "."
+      : "";
+  }
+  function choosePlan(tierId) {
+    const tier = TIERS.find((item) => item.id === tierId);
+    if (!tier || !plan.dest) return;
+    plan.tier = tier;
+    const cost = planCost(plan.dest, tier);
+    $("plan-list").hidden = true;
+    $("plan-book").hidden = false;
+    $("book-title").textContent = tier.name + " plan for " + plan.dest.name;
+    $("book-summary").textContent = plural(cost.days, "day", "days") + ", " + money(cost.total, plan.dest.currency) + " per person. Pick a start date and say how many are going.";
+    $("book-start").min = todayKey();
+    if (!$("book-start").value) $("book-start").value = addDaysKey(todayKey(), 30);
+    if (!$("book-travelers").value) $("book-travelers").value = "2";
+    setBookError("book-start", "");
+    setBookError("book-travelers", "");
+    updateBookTotal();
+    $("book-title").focus();
+  }
+  function onBookSubmit(event) {
+    event.preventDefault();
+    const start = $("book-start").value;
+    const count = Number($("book-travelers").value);
+    const startError = !parseDate(start) ? "Choose a start date." : start < todayKey() ? "Choose today or a later date." : "";
+    const countError = $("book-travelers").value.trim() === "" || !Number.isInteger(count) || count < 1 || count > MAX_TRAVELERS ? "Enter a whole number from 1 to " + MAX_TRAVELERS + "." : "";
+    setBookError("book-start", startError);
+    setBookError("book-travelers", countError);
+    if (startError || countError) {
+      $(startError ? "book-start" : "book-travelers").focus();
+      return;
+    }
+    const built = createFromPlan(plan.dest, plan.tier, start, count);
+    if (!built) {
+      setBookError("book-start", "This browser couldn't save the trip. Storage may be full or blocked.");
+      return;
+    }
+    $("plan-book").hidden = true;
+    $("plan-done").hidden = false;
+    $("done-title").textContent = "“" + built.trip.title + "” is ready";
+    $("done-text").textContent = formatRange(built.trip.startDate, built.trip.endDate) + ". The itinerary has " + plural(built.itinerary.activities.length, "activity", "activities") + " with flights there and back, and the budget lists " + plural(built.budget.expenses.length, "expense", "expenses") + " (" + money(built.spent, plan.dest.currency) + ", plus 10% spare in the limit). These are samples, so swap in your real bookings as you make them.";
+    $("done-title").focus();
+    announce("Created " + built.trip.title + " with its itinerary and budget.");
   }
 
   /* ======================================================================
@@ -1774,6 +2022,19 @@
 
     const dialog = $("detail-dialog");
     $("detail-close").addEventListener("click", closeDetail);
+    $("plans-open").addEventListener("click", togglePlans);
+    $("plan-list").addEventListener("click", (event) => {
+      const chosen = event.target.closest("[data-plan]");
+      if (chosen) choosePlan(chosen.dataset.plan);
+    });
+    $("book-back").addEventListener("click", () => {
+      $("plan-book").hidden = true;
+      $("plan-list").hidden = false;
+      const again = document.querySelector('#plan-list [data-plan="' + (plan.tier ? plan.tier.id : "") + '"]');
+      if (again) again.focus();
+    });
+    $("book-travelers").addEventListener("input", updateBookTotal);
+    $("plan-book").addEventListener("submit", onBookSubmit);
     $("detail-dismiss").addEventListener("click", closeDetail);
     $("detail-plan").addEventListener("click", () => {
       const dest = state.detailDest;
