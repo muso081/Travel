@@ -1103,25 +1103,55 @@
     cusco: "Machu Picchu", sydney: "Sydney Opera House"
   };
   const photoJobs = new Map();
+  let photoBatch = null;
   function photosAllowed() {
     /* automated test browsers stay offline unless a test turns photos on */
     return window.__tpPhotos === true || !navigator.webdriver;
+  }
+  const wikiPage = (title) => "https://en.wikipedia.org/wiki/" + encodeURIComponent(title.replace(/ /g, "_"));
+  const goodImage = (src) => typeof src === "string" && /^https:\/\/upload\.wikimedia\.org\//.test(src);
+  /* One request for every destination: the MediaWiki API allows cross-site reads with origin=* */
+  function loadPhotoBatch() {
+    if (photoBatch) return photoBatch;
+    const titles = Object.values(PHOTO_TITLES);
+    const url = "https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=1200&pilimit=50&titles=" + encodeURIComponent(titles.join("|"));
+    photoBatch = fetch(url)
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("HTTP " + response.status))))
+      .then((data) => {
+        const query = (data && data.query) || {};
+        const hop = (list, title) => { const found = (list || []).find((item) => item.from === title); return found ? found.to : title; };
+        const result = new Map();
+        Object.keys(PHOTO_TITLES).forEach((id) => {
+          const wanted = hop(query.redirects, hop(query.normalized, PHOTO_TITLES[id]));
+          const page = (query.pages || []).find((item) => item.title === wanted);
+          if (page && page.thumbnail && goodImage(page.thumbnail.source)) result.set(id, { src: page.thumbnail.source, page: wikiPage(page.title), title: page.title });
+        });
+        return result;
+      })
+      .catch((error) => {
+        console.warn("TravelTogether: Wikipedia photo list could not load (" + error.message + "). Trying photos one by one.");
+        return new Map();
+      });
+    return photoBatch;
+  }
+  /* Backup: the REST summary of one article */
+  function loadOnePhoto(title) {
+    return fetch("https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_")))
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        const thumb = data && (data.originalimage && data.originalimage.width <= 1600 ? data.originalimage : data.thumbnail);
+        return thumb && goodImage(thumb.source) ? { src: thumb.source, page: wikiPage(data.title || title), title: data.title || title } : null;
+      })
+      .catch(() => null);
   }
   function photoFor(destId) {
     const title = PHOTO_TITLES[destId];
     if (!title || !photosAllowed() || typeof fetch !== "function") return Promise.resolve(null);
     if (photoJobs.has(destId)) return photoJobs.get(destId);
-    const job = fetch("https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_")), { headers: { Accept: "application/json" } })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => {
-        const thumb = data && data.thumbnail;
-        if (!thumb || typeof thumb.source !== "string" || !/^https:\/\/upload\.wikimedia\.org\//.test(thumb.source)) return null;
-        const full = data.originalimage || {};
-        const src = full.width >= 960 && /\/\d+px-/.test(thumb.source) ? thumb.source.replace(/\/\d+px-/, "/960px-") : thumb.source;
-        const page = data.content_urls && data.content_urls.desktop && typeof data.content_urls.desktop.page === "string" ? data.content_urls.desktop.page : "https://en.wikipedia.org/wiki/" + encodeURIComponent(title);
-        return { src, page, title: typeof data.title === "string" ? data.title : title };
-      })
-      .catch(() => null);
+    const job = loadPhotoBatch().then((map) => map.get(destId) || loadOnePhoto(title)).then((photo) => {
+      if (!photo) console.warn("TravelTogether: no photo for " + title + "; showing the drawing instead.");
+      return photo;
+    });
     photoJobs.set(destId, job);
     return job;
   }
@@ -1135,7 +1165,7 @@
       img.className = "dest-photo";
       img.referrerPolicy = "no-referrer";
       img.addEventListener("load", () => { host.classList.add("has-photo"); if (onReady) onReady(photo); });
-      img.addEventListener("error", () => img.remove());
+      img.addEventListener("error", () => { img.remove(); console.warn("TravelTogether: the photo for " + destId + " did not load: " + photo.src); });
       img.src = photo.src;
       host.append(img);
     });
