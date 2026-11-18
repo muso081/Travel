@@ -1110,45 +1110,54 @@
   }
   const wikiPage = (title) => "https://en.wikipedia.org/wiki/" + encodeURIComponent(title.replace(/ /g, "_"));
   const goodImage = (src) => typeof src === "string" && /^https:\/\/upload\.wikimedia\.org\//.test(src);
-  /* One request for every destination: the MediaWiki API allows cross-site reads with origin=* */
-  function loadPhotoBatch() {
-    if (photoBatch) return photoBatch;
-    const titles = Object.values(PHOTO_TITLES);
-    const url = "https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=1200&pilimit=50&titles=" + encodeURIComponent(titles.join("|"));
-    photoBatch = fetch(url)
+  /* The MediaWiki API allows cross-site reads with origin=*. It answers in parts:
+     follow "continue" until every page is in, so no destination is left out. */
+  function queryPhotos(titles) {
+    const base = "https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=1200&pilimit=50&titles=" + encodeURIComponent(titles.join("|"));
+    const found = new Map();
+    const hops = new Map();
+    const round = (extra, count) => fetch(base + extra)
       .then((response) => (response.ok ? response.json() : Promise.reject(new Error("HTTP " + response.status))))
       .then((data) => {
         const query = (data && data.query) || {};
-        const hop = (list, title) => { const found = (list || []).find((item) => item.from === title); return found ? found.to : title; };
-        const result = new Map();
-        Object.keys(PHOTO_TITLES).forEach((id) => {
-          const wanted = hop(query.redirects, hop(query.normalized, PHOTO_TITLES[id]));
-          const page = (query.pages || []).find((item) => item.title === wanted);
-          if (page && page.thumbnail && goodImage(page.thumbnail.source)) result.set(id, { src: page.thumbnail.source, page: wikiPage(page.title), title: page.title });
+        (query.normalized || []).concat(query.redirects || []).forEach((item) => hops.set(item.from, item.to));
+        (query.pages || []).forEach((page) => {
+          if (page.thumbnail && goodImage(page.thumbnail.source)) found.set(page.title, page.thumbnail.source);
         });
-        return result;
-      })
-      .catch((error) => {
+        if (data && data.continue && count < 10) {
+          const more = Object.keys(data.continue).map((key) => "&" + encodeURIComponent(key) + "=" + encodeURIComponent(data.continue[key])).join("");
+          return round(more, count + 1);
+        }
+        return null;
+      });
+    return round("", 0).then(() => {
+      const result = new Map();
+      titles.forEach((title) => {
+        let name = title;
+        for (let step = 0; step < 3 && hops.has(name); step += 1) name = hops.get(name);
+        if (found.has(name)) result.set(title, { src: found.get(name), page: wikiPage(name), title: name });
+      });
+      return result;
+    });
+  }
+  function loadPhotoBatch() {
+    if (!photoBatch) {
+      photoBatch = queryPhotos(Object.values(PHOTO_TITLES)).catch((error) => {
         console.warn("TravelTogether: Wikipedia photo list could not load (" + error.message + "). Trying photos one by one.");
         return new Map();
       });
+    }
     return photoBatch;
   }
-  /* Backup: the REST summary of one article */
+  /* Backup: ask for one article on its own */
   function loadOnePhoto(title) {
-    return fetch("https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_")))
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => {
-        const thumb = data && (data.originalimage && data.originalimage.width <= 1600 ? data.originalimage : data.thumbnail);
-        return thumb && goodImage(thumb.source) ? { src: thumb.source, page: wikiPage(data.title || title), title: data.title || title } : null;
-      })
-      .catch(() => null);
+    return queryPhotos([title]).then((map) => map.get(title) || null).catch(() => null);
   }
   function photoFor(destId) {
     const title = PHOTO_TITLES[destId];
     if (!title || !photosAllowed() || typeof fetch !== "function") return Promise.resolve(null);
     if (photoJobs.has(destId)) return photoJobs.get(destId);
-    const job = loadPhotoBatch().then((map) => map.get(destId) || loadOnePhoto(title)).then((photo) => {
+    const job = loadPhotoBatch().then((map) => map.get(title) || loadOnePhoto(title)).then((photo) => {
       if (!photo) console.warn("TravelTogether: no photo for " + title + "; showing the drawing instead.");
       return photo;
     });
