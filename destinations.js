@@ -1234,8 +1234,10 @@
     $("detail-plan").textContent = "Plan it myself";
     plan.dest = dest;
     plan.tier = null;
-    renderPriceBox(dest);
-    resetPlans();
+    if ($("plan-list")) {
+      renderPriceBox(dest);
+      resetPlans();
+    }
 
     if (typeof dialog.showModal === "function") dialog.showModal();
     else dialog.setAttribute("open", "");
@@ -2022,6 +2024,7 @@
 
     const dialog = $("detail-dialog");
     $("detail-close").addEventListener("click", closeDetail);
+    if ($("plans-open") && $("plan-book")) {
     $("plans-open").addEventListener("click", togglePlans);
     $("plan-list").addEventListener("click", (event) => {
       const chosen = event.target.closest("[data-plan]");
@@ -2035,6 +2038,7 @@
     });
     $("book-travelers").addEventListener("input", updateBookTotal);
     $("plan-book").addEventListener("submit", onBookSubmit);
+    }
     $("detail-dismiss").addEventListener("click", closeDetail);
     $("detail-plan").addEventListener("click", () => {
       const dest = state.detailDest;
