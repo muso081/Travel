@@ -1,29 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="124" height="124" viewBox="18 18 124 124" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
   <title>TravelTogether</title>
-  <defs>
-    <linearGradient id="bgGrad" x1="18" y1="18" x2="142" y2="142" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#162B3F"/>
-      <stop offset="1" stop-color="#0B1525"/>
-    </linearGradient>
-    <linearGradient id="frontGrad" x1="45" y1="28" x2="110" y2="110" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7DE7FF"/>
-      <stop offset="0.5" stop-color="#6EE7D9"/>
-      <stop offset="1" stop-color="#7C9BFF"/>
-    </linearGradient>
-    <linearGradient id="sideGrad" x1="82" y1="36" x2="116" y2="122" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0D5262"/>
-      <stop offset="1" stop-color="#132E5C"/>
-    </linearGradient>
-    <linearGradient id="highlight" x1="42" y1="20" x2="72" y2="72" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFFFF" stop-opacity="0.9"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-    </linearGradient>
-  </defs>
-  <rect x="18" y="18" width="124" height="124" rx="28" fill="url(#bgGrad)"/>
-  <rect x="18.5" y="18.5" width="123" height="123" rx="27.5" stroke="#67E8F9" stroke-opacity="0.3"/>
-  <path d="M50 42H110V64H88V118H70V64H50V42Z" fill="url(#frontGrad)"/>
-  <path d="M88 64H110V118H92V70L88 64Z" fill="url(#sideGrad)"/>
-  <path d="M50 42H88L106 56H68L50 42Z" fill="url(#highlight)" opacity="0.7"/>
-  <path d="M34 110C55 97 73 90 92 86C108 82 117 82 128 76" stroke="#8B5CF6" stroke-opacity="0.9" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="128" cy="76" r="6" fill="#8B5CF6"/>
+  <circle cx="32" cy="32" r="32" fill="#4040f2"/>
+  <g fill="none" stroke="#ffffff" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round" transform="translate(13 14) scale(1.55)">
+    <path d="M21 3 3 10.6l7 2.6L12.8 21 21 3z"/><path d="M10 13.2 21 3"/>
+  </g>
 </svg>
