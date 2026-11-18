@@ -893,7 +893,8 @@
     listUnreadable: false,
     skipped: 0,
     detailDest: null,
-    filters: { query: "", region: "all", activity: "all" }
+    filters: { query: "", region: "all", activity: "all", saved: false },
+    favorites: new Set()
   };
 
   const $ = (id) => document.getElementById(id);
@@ -1088,12 +1089,119 @@
 
   const cardNodes = new Map();
 
+
+  /* ======================================================================
+     Real photos: each destination's landmark photo comes from Wikipedia's
+     free summary service when the page is open in a browser. The drawn
+     scene stays underneath, so a card is never empty if a photo can't load.
+     ====================================================================== */
+  const PHOTO_TITLES = {
+    paris: "Eiffel Tower", rome: "Colosseum", lisbon: "Belém Tower", santorini: "Oia, Greece",
+    reykjavik: "Hallgrímskirkja", tokyo: "Shibuya Crossing", seoul: "Gyeongbokgung", bangkok: "Wat Arun",
+    bali: "Pura Ulun Danu Bratan", samarkand: "Registan", marrakech: "Jemaa el-Fnaa", cairo: "Giza pyramid complex",
+    "cape-town": "Table Mountain", "new-york": "Manhattan", banff: "Moraine Lake", rio: "Christ the Redeemer (statue)",
+    cusco: "Machu Picchu", sydney: "Sydney Opera House"
+  };
+  const photoJobs = new Map();
+  function photosAllowed() {
+    /* automated test browsers stay offline unless a test turns photos on */
+    return window.__tpPhotos === true || !navigator.webdriver;
+  }
+  function photoFor(destId) {
+    const title = PHOTO_TITLES[destId];
+    if (!title || !photosAllowed() || typeof fetch !== "function") return Promise.resolve(null);
+    if (photoJobs.has(destId)) return photoJobs.get(destId);
+    const job = fetch("https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_")), { headers: { Accept: "application/json" } })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        const thumb = data && data.thumbnail;
+        if (!thumb || typeof thumb.source !== "string" || !/^https:\/\/upload\.wikimedia\.org\//.test(thumb.source)) return null;
+        const full = data.originalimage || {};
+        const src = full.width >= 960 && /\/\d+px-/.test(thumb.source) ? thumb.source.replace(/\/\d+px-/, "/960px-") : thumb.source;
+        const page = data.content_urls && data.content_urls.desktop && typeof data.content_urls.desktop.page === "string" ? data.content_urls.desktop.page : "https://en.wikipedia.org/wiki/" + encodeURIComponent(title);
+        return { src, page, title: typeof data.title === "string" ? data.title : title };
+      })
+      .catch(() => null);
+    photoJobs.set(destId, job);
+    return job;
+  }
+  function attachPhoto(host, destId, onReady) {
+    photoFor(destId).then((photo) => {
+      if (!photo || !host.isConnected) return;
+      host.querySelectorAll(".dest-photo").forEach((node) => node.remove());
+      const img = new Image();
+      img.alt = "";
+      img.decoding = "async";
+      img.className = "dest-photo";
+      img.referrerPolicy = "no-referrer";
+      img.addEventListener("load", () => { host.classList.add("has-photo"); if (onReady) onReady(photo); });
+      img.addEventListener("error", () => img.remove());
+      img.src = photo.src;
+      host.append(img);
+    });
+  }
+  function watchPhotos() {
+    const load = (card) => attachPhoto(card.querySelector(".dest-scene"), card.dataset.dest);
+    const cards = Array.from(document.querySelectorAll("#dest-grid .dest-card"));
+    if (typeof IntersectionObserver !== "function") { cards.forEach(load); return; }
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        observer.unobserve(entry.target);
+        load(entry.target);
+      });
+    }, { rootMargin: "600px 0px" });
+    cards.forEach((card) => observer.observe(card));
+  }
+
+  /* ---- saved destinations (a heart on each card) ---- */
+  const FAVORITES_KEY = "tp:favorites";
+  function loadFavorites() {
+    const list = readJson(FAVORITES_KEY);
+    return new Set(Array.isArray(list) ? list.filter((id) => DESTINATIONS.some((dest) => dest.id === id)) : []);
+  }
+  function syncSaved() {
+    $("saved-count").textContent = String(state.favorites.size);
+    document.querySelectorAll("#dest-grid .fav-button").forEach((node) => node.setAttribute("aria-pressed", state.favorites.has(node.dataset.dest) ? "true" : "false"));
+  }
+  function toggleFavorite(dest) {
+    const had = state.favorites.has(dest.id);
+    if (had) state.favorites.delete(dest.id);
+    else state.favorites.add(dest.id);
+    storageSet(FAVORITES_KEY, JSON.stringify(Array.from(state.favorites)));
+    syncSaved();
+    if (state.filters.saved) applyFilters();
+    announce(had ? "Removed " + dest.name + " from saved." : "Saved " + dest.name + ".");
+  }
+  function surprise() {
+    const pool = DESTINATIONS.filter((dest) => !cardNodes.get(dest.id).hidden);
+    const list = pool.length ? pool : DESTINATIONS;
+    const avoid = state.detailDest ? state.detailDest.id : "";
+    const options = list.length > 1 ? list.filter((dest) => dest.id !== avoid) : list;
+    openDetail(options[Math.floor(Math.random() * options.length)]);
+  }
+
   function buildCards() {
     const grid = $("dest-grid");
     DESTINATIONS.forEach((dest) => {
       const item = el("li", "dest-card");
+      item.dataset.dest = dest.id;
+      const media = el("div", "dest-media");
       const scene = el("div", "dest-scene");
       renderScene(scene, dest.id);
+      const overlay = el("div", "dest-overlay");
+      overlay.setAttribute("aria-hidden", "true");
+      overlay.append(el("b", "", dest.name), el("span", "", dest.country));
+      const region = el("span", "dest-region", dest.region);
+      region.setAttribute("aria-hidden", "true");
+      const fav = el("button", "fav-button");
+      fav.type = "button";
+      fav.dataset.action = "fav";
+      fav.dataset.dest = dest.id;
+      fav.setAttribute("aria-pressed", "false");
+      fav.setAttribute("aria-label", "Save " + dest.name);
+      fav.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/></svg>';
+      media.append(scene, overlay, region, fav);
 
       const body = el("div", "dest-body");
       const head = el("div", "dest-head");
@@ -1122,7 +1230,7 @@
       actions.append(more, plan);
 
       body.append(head, el("p", "dest-blurb", dest.blurb), tags, cost, actions);
-      item.append(scene, body);
+      item.append(media, body);
       grid.append(item);
       cardNodes.set(dest.id, item);
     });
@@ -1157,12 +1265,14 @@
       const visible =
         (filters.region === "all" || dest.region === filters.region) &&
         (filters.activity === "all" || dest.activities.includes(filters.activity)) &&
-        words.every((word) => text.includes(word));
+        words.every((word) => text.includes(word)) &&
+        (!filters.saved || state.favorites.has(dest.id));
       cardNodes.get(dest.id).hidden = !visible;
       if (visible) shown += 1;
     });
     const total = DESTINATIONS.length;
-    const filtered = Boolean(words.length) || filters.region !== "all" || filters.activity !== "all";
+    const filtered = Boolean(words.length) || filters.region !== "all" || filters.activity !== "all" || filters.saved === true;
+    $("saved-only").setAttribute("aria-pressed", filters.saved ? "true" : "false");
     $("results-count").textContent = shown === total ? "Showing all " + total + " destinations" : shown === 0 ? "No destinations match" : "Showing " + shown + " of " + total + " destinations";
     $("clear-filters").hidden = !filtered;
     $("dest-empty").hidden = shown !== 0;
@@ -1170,7 +1280,7 @@
   }
 
   function clearFilters() {
-    state.filters = { query: "", region: "all", activity: "all" };
+    state.filters = { query: "", region: "all", activity: "all", saved: false };
     $("search").value = "";
     $("region").value = "all";
     const all = document.querySelector('#activity-group input[value="all"]');
@@ -1206,6 +1316,14 @@
     $("detail-sub").textContent = dest.country + " · " + dest.region;
     $("detail-blurb").textContent = dest.blurb;
     renderScene($("detail-scene"), dest.id);
+    $("detail-scene").classList.remove("has-photo");
+    $("detail-credit").hidden = true;
+    attachPhoto($("detail-scene"), dest.id, (photo) => {
+      if (state.detailDest !== dest) return;
+      $("detail-credit").href = photo.page;
+      $("detail-credit").textContent = "Photo: " + photo.title + ", Wikipedia";
+      $("detail-credit").hidden = false;
+    });
 
     const highlights = $("detail-highlights");
     highlights.replaceChildren();
@@ -2019,11 +2137,31 @@
       const dest = DESTINATIONS.find((item) => item.id === target.dataset.dest);
       if (!dest) return;
       if (target.dataset.action === "details") openDetail(dest);
+      if (target.dataset.action === "fav") toggleFavorite(dest);
       if (target.dataset.action === "plan") planFrom(dest);
     });
 
     const dialog = $("detail-dialog");
     $("detail-close").addEventListener("click", closeDetail);
+    $("saved-only").addEventListener("click", () => {
+      state.filters.saved = !state.filters.saved;
+      applyFilters();
+    });
+    $("surprise").addEventListener("click", surprise);
+    $("hero-search").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const search = $("search");
+      search.value = $("hero-q").value.trim();
+      search.dispatchEvent(new Event("input", { bubbles: true }));
+      jumpTo($("destinations"), $("destinations-title"));
+    });
+    $("dest-grid").addEventListener("pointermove", (event) => {
+      const card = event.target.closest(".dest-card");
+      if (!card) return;
+      const box = card.getBoundingClientRect();
+      card.style.setProperty("--mx", (event.clientX - box.left) + "px");
+      card.style.setProperty("--my", (event.clientY - box.top) + "px");
+    });
     if ($("plans-open") && $("plan-book")) {
     $("plans-open").addEventListener("click", togglePlans);
     $("plan-list").addEventListener("click", (event) => {
@@ -2099,6 +2237,9 @@
     $("dest-lede").textContent = DESTINATIONS.length + " places to start from. Sample daily costs are rounded, illustrative figures in each place's own currency, not live prices.";
     buildFilterControls();
     buildCards();
+    state.favorites = loadFavorites();
+    syncSaved();
+    watchPhotos();
     buildFormOptions();
     applyFilters();
     syncState();

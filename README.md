@@ -73,7 +73,7 @@ If something looks wrong:
 
 ## Using the app
 
-**Explore.** 18 bundled destinations with search, a region filter and an activity filter. Each card opens a detail view with highlights, practical facts and **sample daily costs**. Those costs are rounded, illustrative figures in each place's own currency, not live prices. Each destination also offers ready-made plans, cheapest first (Saver, Classic, Comfort, Luxury). Choosing one asks for a start date and the number of travelers, then creates the trip with its itinerary (flights there and back, sights, meals) and its budget (flights, stay, meals, transport, activities, insurance) already filled in. Plan prices are rough samples built from the daily costs, not live fares. You can also create a trip from scratch or from a destination, then edit, select or delete saved trips (deleting asks first and also removes that trip's plans); the active trip card shows a countdown to the trip (or which day you are on), how far the itinerary, budget and packing list have come, and links to the three planning pages. A trip can last up to 90 days.
+**Explore.** 18 bundled destinations with search (also from the hero), a region filter, an activity filter, a heart to save favourites (with a "Saved" filter, remembered under `tp:favorites`) and a **Surprise me** button. Cards and details show a real landmark photo, loaded in the visitor's browser from Wikipedia's free summary service (the only outside request the site makes); if it can't load, the drawn scene stays. Each card opens a detail view with highlights, practical facts and **sample daily costs**. Those costs are rounded, illustrative figures in each place's own currency, not live prices. Each destination also offers ready-made plans, cheapest first (Saver, Classic, Comfort, Luxury). Choosing one asks for a start date and the number of travelers, then creates the trip with its itinerary (flights there and back, sights, meals) and its budget (flights, stay, meals, transport, activities, insurance) already filled in. Plan prices are rough samples built from the daily costs, not live fares. You can also create a trip from scratch or from a destination, then edit, select or delete saved trips (deleting asks first and also removes that trip's plans); the active trip card shows a countdown to the trip (or which day you are on), how far the itinerary, budget and packing list have come, and links to the three planning pages. A trip can last up to 90 days.
 
 **Itinerary.** One tab per day of the trip. Add activities with a title, date, start time, duration, location and notes. The timeline flags overlaps, shows the number of activities and the planned hours for each day, and has move up / move down buttons for reordering. If you shorten the trip, activities outside the new dates are kept and listed separately instead of being deleted. A time ribbon shows the shape of each day at a glance, and the list points out the free time between activities. Export and import JSON, or print the schedule.
 
@@ -93,7 +93,7 @@ If something looks wrong:
 
 ## Privacy
 
-The site makes no network requests after it loads: no analytics, no web fonts, no CDNs. Nothing you enter leaves your device.
+The only outside requests are the destination photos from Wikipedia. There are no analytics, no web fonts and no CDNs, and nothing you enter leaves your device.
 
 ## Browser support
 

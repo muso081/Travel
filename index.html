@@ -8,7 +8,7 @@
     <meta name="description" content="Browse destinations with sample daily costs, then create the trip your itinerary, budget and packing list will share.">
     <title>Explore destinations · TravelTogether</title>
     <link rel="icon" type="image/svg+xml" href="./logo.svg">
-    <link rel="stylesheet" href="./destinations.css?v=7b4a12beb8">
+    <link rel="stylesheet" href="./destinations.css?v=ab006b779a">
     <script>(function () {
   var theme = null;
   try { theme = window.localStorage.getItem("tp:theme"); } catch (error) {}
@@ -53,6 +53,11 @@
           <p class="hero-eyebrow">18 destinations · 6 regions · one shared plan</p>
           <h1 id="hero-title">Plan the trip <em>together.</em></h1>
           <p class="lede">Pick a place, set the dates, then keep your itinerary, budget and packing list in one shared plan. It all stays in this browser, so there is nothing to sign up for.</p>
+          <form class="hero-search" id="hero-search" role="search" aria-label="Find a destination">
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="9" cy="9" r="5.5"/><path d="M13.2 13.2 17 17"/></svg>
+            <input id="hero-q" type="search" aria-label="Where do you want to go?" placeholder="Where to? Try “beach”, “Japan” or “food”" autocomplete="off">
+            <button class="button button-primary" type="submit">Find</button>
+          </form>
           <div class="hero-actions">
             <a class="button button-primary" href="#destinations" data-jump>Browse destinations<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10h12M11 5l5 5-5 5"/></svg></a>
             <a class="button button-secondary" href="#trip-form" data-jump>Create a trip</a>
@@ -84,7 +89,11 @@
           </fieldset>
           <div class="results-bar">
             <p id="results-count" role="status"></p>
-            <button class="button button-text button-small" type="button" id="clear-filters" hidden>Clear filters</button>
+            <div class="results-tools">
+              <button class="saved-toggle" type="button" id="saved-only" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/></svg>Saved <span id="saved-count">0</span></button>
+              <button class="button button-secondary button-small" type="button" id="surprise">Surprise me</button>
+              <button class="button button-text button-small" type="button" id="clear-filters" hidden>Clear filters</button>
+            </div>
           </div>
         </form>
 
@@ -195,6 +204,7 @@
       <dialog class="dialog dialog-wide" id="detail-dialog" aria-labelledby="detail-title">
         <div class="detail">
           <div class="detail-scene" id="detail-scene"></div>
+          <a class="photo-credit" id="detail-credit" href="https://en.wikipedia.org/" target="_blank" rel="noopener" hidden>Photo: Wikipedia</a>
           <button class="icon-button detail-close" id="detail-close" type="button" aria-label="Close details"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
           <div class="detail-body">
             <header>
@@ -285,6 +295,6 @@
       <span>Made for the miles between here and there.</span>
       <span>Your plans stay in this browser. Nothing is uploaded.</span>
     </footer>
-    <script src="./destinations.js?v=5c2e4b0174"></script>
+    <script src="./destinations.js?v=03cda071fd"></script>
   </body>
 </html>
