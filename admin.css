@@ -639,3 +639,12 @@ h2 { font-weight: 500; }
 
 .admin-gate { display: grid; justify-items: start; gap: 12px; padding: 32px; }
 .admin-gate h2 { font-size: 2rem; }
+
+/* drop zone */
+.photo-zone { position: relative; border-radius: 14px; outline: 2px dashed transparent; outline-offset: 4px; transition: outline-color 0.2s ease; }
+.photo-zone .photo-preview.no-photo::before { inset: 0 0 28% 0; }
+.drop-hint { position: absolute; left: 0; right: 0; bottom: 12px; display: none; align-items: center; justify-content: center; gap: 8px; color: #ffffff; font-size: 0.875rem; font-weight: 700; pointer-events: none; }
+.drop-hint svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.photo-zone:has(.no-photo) .drop-hint { display: flex; }
+.photo-zone.is-drag { outline-color: var(--teal); }
+.photo-zone.is-drag .drop-hint { display: flex; inset: 0; bottom: 0; background: rgba(64, 64, 242, 0.78); border-radius: 12px; font-size: 1rem; }

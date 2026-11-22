@@ -8,7 +8,7 @@
     <meta name="description" content="Add, edit and remove destinations with real photos. They appear on Explore in this browser.">
     <title>Destination admin · TravelTogether</title>
     <link rel="icon" type="image/svg+xml" href="./logo.svg">
-    <link rel="stylesheet" href="./admin.css?v=0b8b7bc715">
+    <link rel="stylesheet" href="./admin.css?v=ebff1ee88d">
     <script>(function () {
   var theme = null;
   try { theme = window.localStorage.getItem("tp:theme"); } catch (error) {}
@@ -140,8 +140,11 @@
             </div>
             <aside class="form-photo" aria-labelledby="photo-title">
               <h3 id="photo-title">Photo</h3>
-              <div class="photo-preview photo-frame no-photo" id="f-photo-preview" data-initials="?"></div>
-              <p class="photo-status" id="f-photo-status" aria-live="polite">No photo yet. Find one on Wikipedia, upload your own, or paste a link.</p>
+              <div class="photo-zone" id="photo-zone">
+                <div class="photo-preview photo-frame no-photo" id="f-photo-preview" data-initials="?"></div>
+                <p class="drop-hint" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>Drop a photo here</p>
+              </div>
+              <p class="photo-status" id="f-photo-status" aria-live="polite">No photo yet. Drag one onto the frame, upload, find one on Wikipedia, or paste a link.</p>
               <button class="button button-primary" type="button" id="f-photo-find">Find a real photo</button>
               <label class="button button-secondary upload-button" for="f-photo-file">Upload a photo</label>
               <input id="f-photo-file" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp">
@@ -162,6 +165,6 @@
       <span>Your plans stay in this browser. Nothing is uploaded.</span>
       <a href="./admin.html">Destination admin</a>
     </footer>
-    <script src="./admin.js?v=302a1a2db4"></script>
+    <script src="./admin.js?v=d4163faf53"></script>
   </body>
 </html>

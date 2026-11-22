@@ -788,6 +788,8 @@
      under "tp:destinations" and checked here before any page uses them.
      ====================================================================== */
   const BUILTIN_COUNT = DESTINATIONS.length;
+  const BUILTIN_ORIGINALS = DESTINATIONS.slice();
+  const BUILTIN_IDS = new Set(BUILTIN_ORIGINALS.map((dest) => dest.id));
   const CUSTOM_KEY = "tp:destinations";
   const CUSTOM_MAX = 60;
   const PHOTO_DATA_MAX = 1600000;
@@ -826,6 +828,21 @@
       currency: raw.currency, costLevel: level, costs, photo: validPhoto(raw.photo), custom: true
     };
   }
+  function dedupe(items) {
+    const seen = new Set();
+    return items.filter((item) => (seen.has(item.id) ? false : seen.add(item.id)));
+  }
+  /* A stored row with a built-in id is an admin's edit of that destination; any other id is a new one. */
+  function applyDestinationRows(items) {
+    (items || []).forEach((item) => {
+      if (BUILTIN_IDS.has(item.id)) {
+        const index = DESTINATIONS.findIndex((dest) => dest.id === item.id);
+        DESTINATIONS[index] = Object.assign({}, item, { custom: false, edited: true });
+      } else if (!DESTINATIONS.some((dest) => dest.id === item.id)) {
+        DESTINATIONS.push(item);
+      }
+    });
+  }
   function readCustomDestinations() {
     const raw = storageGet(CUSTOM_KEY);
     if (!raw.ok) return { items: [], damaged: false, blocked: true };
@@ -834,21 +851,19 @@
     try { doc = JSON.parse(raw.value); } catch (error) { doc = null; }
     const list = doc && Array.isArray(doc.items) ? doc.items : null;
     if (!list) return { items: [], damaged: true, blocked: false };
-    const taken = new Set(DESTINATIONS.slice(0, BUILTIN_COUNT).map((dest) => dest.id));
-    const items = list.slice(0, CUSTOM_MAX).map((item) => cleanCustomDestination(item, taken)).filter(Boolean);
-    return { items, damaged: items.length !== list.length, blocked: false };
+    const items = list.slice(0, CUSTOM_MAX + BUILTIN_COUNT).map((item) => cleanCustomDestination(item, new Set())).filter(Boolean);
+    return { items: dedupe(items), damaged: items.length !== list.length, blocked: false };
   }
   /* With the database on, CUSTOM_KEY is only this browser's copy of the "destinations" table. */
   function fetchCloudDestinations() {
     return cloudFetch("/rest/v1/destinations?select=id,data&order=updated_at.desc").then((rows) => {
-      const taken = new Set(DESTINATIONS.slice(0, BUILTIN_COUNT).map((dest) => dest.id));
-      const items = (Array.isArray(rows) ? rows : []).map((row) => cleanCustomDestination(Object.assign({}, row && row.data, { id: row && row.id }), taken)).filter(Boolean).slice(0, CUSTOM_MAX);
+      const items = dedupe((Array.isArray(rows) ? rows : []).map((row) => cleanCustomDestination(Object.assign({}, row && row.data, { id: row && row.id }), new Set())).filter(Boolean)).slice(0, CUSTOM_MAX + BUILTIN_COUNT);
       rawSet(CUSTOM_KEY, JSON.stringify({ version: 1, items }));
       return items;
     });
   }
   const CUSTOM_LOAD = readCustomDestinations();
-  CUSTOM_LOAD.items.forEach((dest) => DESTINATIONS.push(dest));
+  applyDestinationRows(CUSTOM_LOAD.items);
 
   /* ======================================================================
      Real photos. A photo added on the Admin page is used as it is. Every
@@ -875,7 +890,7 @@
   const goodImage = (src) => typeof src === "string" && /^https:\/\/upload\.wikimedia\.org\//.test(src);
   /* The API answers in parts: follow "continue" until every page is in. */
   function queryPhotos(titles) {
-    const base = "https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=1200&pilimit=50&titles=" + encodeURIComponent(titles.slice(0, 50).join("|"));
+    const base = "https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=960&pilimit=50&titles=" + encodeURIComponent(titles.slice(0, 50).join("|"));
     const found = new Map();
     const hops = new Map();
     const round = (extra, count) => fetch(base + extra)
@@ -950,7 +965,6 @@
     img.alt = "";
     img.decoding = "async";
     img.className = "dest-photo";
-    img.referrerPolicy = "no-referrer";
     img.addEventListener("load", () => { host.classList.add("has-photo"); if (onReady) onReady(photo); });
     img.addEventListener("error", () => {
       img.remove();
@@ -974,7 +988,14 @@
      Explore. Built-in destinations are read-only but can be copied.
      ====================================================================== */
   const $ = (id) => document.getElementById(id);
-  const BUILTINS = DESTINATIONS.slice(0, BUILTIN_COUNT);
+  const BUILTINS = BUILTIN_ORIGINALS;
+  /* admin.custom holds every stored row: new destinations and edits of built-in ones (same id). */
+  const overrideOf = (id) => admin.custom.find((item) => item.id === id) || null;
+  function viewList() {
+    const added = admin.custom.filter((item) => !BUILTIN_IDS.has(item.id));
+    const builtins = BUILTINS.map((dest) => { const edit = overrideOf(dest.id); return edit ? Object.assign({}, edit, { custom: false, edited: true }) : dest; });
+    return added.concat(builtins);
+  }
   const admin = { custom: CUSTOM_LOAD.items.slice(), editing: null, photo: "", show: "all", photoToken: 0 };
 
   function money(amount, currency) {
@@ -1017,9 +1038,20 @@
     nameCell.append(el("strong", "", dest.name), el("span", "muted", dest.country));
     const costCell = el("td", "cell-cost", money(daily(dest), dest.currency));
     const source = el("td");
-    source.append(el("span", dest.custom ? "badge badge-teal" : "badge", dest.custom ? "Added" : "Built-in"));
+    source.append(el("span", dest.custom ? "badge badge-teal" : dest.edited ? "badge badge-violet" : "badge", dest.custom ? "Added" : dest.edited ? "Built-in · edited" : "Built-in"));
     const actions = el("td", "cell-actions");
-    if (dest.custom) {
+    const action = (label, act, aria, kind) => {
+      const button = el("button", "button " + (kind || "button-secondary") + " button-small", label);
+      button.type = "button";
+      button.dataset.act = act;
+      button.setAttribute("aria-label", aria);
+      return button;
+    };
+    if (!dest.custom) {
+      actions.append(action("Edit", "edit", "Edit " + dest.name));
+      if (dest.edited) actions.append(action("Reset", "reset", "Reset " + dest.name + " to the original", "button-text"));
+      else actions.append(action("Template", "copy", "Use " + dest.name + " as a template for a new destination", "button-text"));
+    } else {
       const edit = el("button", "button button-secondary button-small", "Edit");
       edit.type = "button";
       edit.dataset.act = "edit";
@@ -1029,19 +1061,13 @@
       remove.dataset.act = "delete";
       remove.setAttribute("aria-label", "Delete " + dest.name);
       actions.append(edit, remove);
-    } else {
-      const copy = el("button", "button button-text button-small", "Use as template");
-      copy.type = "button";
-      copy.dataset.act = "copy";
-      copy.setAttribute("aria-label", "Use " + dest.name + " as a template");
-      actions.append(copy);
     }
     row.append(thumbCell, nameCell, el("td", "", dest.region), costCell, source, actions);
     return row;
   }
   function renderTable() {
     const words = fold($("admin-search").value).split(/\s+/).filter(Boolean);
-    const all = admin.custom.concat(BUILTINS);
+    const all = viewList();
     const list = all.filter((dest) => {
       if (admin.show === "custom" && !dest.custom) return false;
       if (admin.show === "builtin" && dest.custom) return false;
@@ -1056,7 +1082,9 @@
       attachPhoto(row.querySelector(".admin-thumb"), dest);
     });
     $("admin-empty").hidden = list.length > 0;
-    $("admin-count").textContent = plural(BUILTINS.length, "built-in destination", "built-in destinations") + " and " + admin.custom.length + " added. Showing " + list.length + ".";
+    const added = admin.custom.filter((item) => !BUILTIN_IDS.has(item.id)).length;
+    const edited = admin.custom.length - added;
+    $("admin-count").textContent = plural(BUILTINS.length, "built-in destination", "built-in destinations") + (edited ? " (" + edited + " edited)" : "") + " and " + added + " added. Showing " + list.length + ".";
     document.querySelectorAll(".seg-button").forEach((button) => button.setAttribute("aria-pressed", button.dataset.show === admin.show ? "true" : "false"));
   }
 
@@ -1092,6 +1120,7 @@
     $("f-level").value = String(d.costLevel);
     $("f-photo-url").value = "";
     setPhoto(mode === "edit" ? d.photo : "", blank ? "" : null);
+    if (mode === "edit" && !d.photo && !d.custom) $("f-photo-status").textContent = "Its photo comes from Wikipedia. Drop or upload your own to replace it.";
     $("dest-dialog").showModal();
     $("f-name").focus();
   }
@@ -1201,7 +1230,8 @@
       document.querySelector(target).focus();
       return null;
     }
-    const taken = new Set(BUILTINS.map((dest) => dest.id).concat(admin.custom.filter((dest) => dest !== admin.editing).map((dest) => dest.id)));
+    const taken = new Set(BUILTINS.map((dest) => dest.id).concat(admin.custom.map((dest) => dest.id)));
+    if (admin.editing) taken.delete(admin.editing.id);
     let id = admin.editing ? admin.editing.id : slugify(name, "place").slice(0, 50);
     if (!admin.editing) for (let n = 2; taken.has(id); n += 1) id = slugify(name, "place").slice(0, 50) + "-" + n;
     return cleanCustomDestination({
@@ -1213,14 +1243,15 @@
     event.preventDefault();
     const dest = readForm();
     if (!dest) return;
-    if (!admin.editing && admin.custom.length >= CUSTOM_MAX) { showFormError("You can add up to " + CUSTOM_MAX + " destinations."); return; }
+    if (!admin.editing && admin.custom.filter((item) => !BUILTIN_IDS.has(item.id)).length >= CUSTOM_MAX) { showFormError("You can add up to " + CUSTOM_MAX + " destinations."); return; }
     const editing = admin.editing;
     const button = $("form-save");
     button.disabled = true;
     storeRows([dest]).then(() => {
       const before = admin.custom.slice();
       const ok = commit(() => {
-        if (editing) admin.custom[admin.custom.indexOf(editing)] = dest;
+        const at = admin.custom.findIndex((item) => item.id === dest.id);
+        if (at >= 0) admin.custom[at] = dest;
         else admin.custom.unshift(dest);
       }, () => { admin.custom = before; });
       if (!ok) {
@@ -1239,21 +1270,22 @@
     $("form-error").hidden = false;
   }
   function removeDest(dest) {
+    const reset = !dest.custom;
     confirmDialog({
-      title: "Delete " + dest.name + "?",
-      message: "It will disappear from Explore in this browser. Trips you already made for it keep their plans.",
-      confirmLabel: "Delete destination",
+      title: reset ? "Reset " + dest.name + "?" : "Delete " + dest.name + "?",
+      message: reset ? "Your changes to " + dest.name + " (text, costs and photo) will be undone and the original comes back." : "It will disappear from Explore" + (ONLINE ? " for everyone" : " in this browser") + ". Trips already made for it keep their plans.",
+      confirmLabel: reset ? "Reset to original" : "Delete destination",
       danger: true
     }).then((yes) => {
       if (!yes) return;
       dropRow(dest).then(() => {
         const before = admin.custom.slice();
-        if (!commit(() => { admin.custom = admin.custom.filter((item) => item !== dest); }, () => { admin.custom = before; })) {
+        if (!commit(() => { admin.custom = admin.custom.filter((item) => item.id !== dest.id); }, () => { admin.custom = before; })) {
           showNotice("Couldn't save the change. Storage may be blocked.", "error");
           return;
         }
         renderTable();
-        announce("Deleted " + dest.name + ".");
+        announce((reset ? "Reset " : "Deleted ") + dest.name + ".");
         $("admin-search").focus();
       }).catch((error) => showNotice("Couldn't delete it from the database: " + error.message, "error"));
     });
@@ -1272,8 +1304,8 @@
       try { doc = JSON.parse(String(reader.result)); } catch (error) { doc = null; }
       const list = doc && Array.isArray(doc.items) ? doc.items : null;
       if (!list) { showNotice("That file isn't a destinations export. Nothing was changed.", "error"); return; }
-      const taken = new Set(BUILTINS.map((dest) => dest.id).concat(admin.custom.map((dest) => dest.id)));
-      const fresh = list.map((item) => cleanCustomDestination(item, taken)).filter(Boolean).slice(0, CUSTOM_MAX - admin.custom.length);
+      const taken = new Set(admin.custom.map((dest) => dest.id));
+      const fresh = list.map((item) => cleanCustomDestination(item, taken)).filter(Boolean).slice(0, CUSTOM_MAX + BUILTIN_COUNT - admin.custom.length);
       storeRows(fresh).then(() => {
         const before = admin.custom.slice();
         if (!commit(() => { admin.custom = admin.custom.concat(fresh); }, () => { admin.custom = before; })) {
@@ -1310,11 +1342,11 @@
       const button = event.target.closest("button[data-act]");
       if (!button) return;
       const id = button.closest("tr").dataset.id;
-      const dest = admin.custom.concat(BUILTINS).find((item) => item.id === id);
+      const dest = viewList().find((item) => item.id === id);
       if (!dest) return;
       if (button.dataset.act === "edit") fillForm(dest, "edit");
       if (button.dataset.act === "copy") fillForm(dest, "copy");
-      if (button.dataset.act === "delete") removeDest(dest);
+      if (button.dataset.act === "delete" || button.dataset.act === "reset") removeDest(dest);
     });
     $("admin-search").addEventListener("input", renderTable);
     document.querySelectorAll(".seg-button").forEach((button) => button.addEventListener("click", () => { admin.show = button.dataset.show; renderTable(); }));
@@ -1324,6 +1356,27 @@
     }));
     ["form-close", "form-cancel"].forEach((id) => $(id).addEventListener("click", () => $("dest-dialog").close()));
     $("f-photo-find").addEventListener("click", findPhoto);
+    /* drag a photo file (or an image from another tab) onto the photo panel */
+    const zone = $("photo-zone");
+    let depth = 0;
+    const dropped = (data) => {
+      const file = Array.from(data.files || []).find((item) => /^image\//.test(item.type));
+      if (file) { uploadPhoto(file); return; }
+      const link = (data.getData("text/uri-list") || data.getData("text/plain") || "").split("\n")[0].trim();
+      if (validPhoto(link)) setPhoto(link, "Using the photo you dropped.");
+      else $("f-photo-status").textContent = "Drop an image file (JPEG, PNG or WebP).";
+    };
+    zone.addEventListener("dragenter", (event) => { event.preventDefault(); depth += 1; zone.classList.add("is-drag"); });
+    zone.addEventListener("dragover", (event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; });
+    zone.addEventListener("dragleave", () => { depth = Math.max(0, depth - 1); if (!depth) zone.classList.remove("is-drag"); });
+    zone.addEventListener("drop", (event) => { event.preventDefault(); depth = 0; zone.classList.remove("is-drag"); dropped(event.dataTransfer); });
+    /* a file dropped anywhere else in the form must not open in the tab and lose the form */
+    $("dest-dialog").addEventListener("dragover", (event) => event.preventDefault());
+    $("dest-dialog").addEventListener("drop", (event) => { if (!zone.contains(event.target)) { event.preventDefault(); dropped(event.dataTransfer); } });
+    $("dest-dialog").addEventListener("paste", (event) => {
+      const file = Array.from((event.clipboardData && event.clipboardData.files) || []).find((item) => /^image\//.test(item.type));
+      if (file) { event.preventDefault(); uploadPhoto(file); }
+    });
     $("f-photo-file").addEventListener("change", (event) => { uploadPhoto(event.target.files[0]); event.target.value = ""; });
     $("f-photo-url").addEventListener("change", usePhotoLink);
     $("f-photo-clear").addEventListener("click", () => setPhoto("", "Photo removed. Explore will look one up on Wikipedia instead."));

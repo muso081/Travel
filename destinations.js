@@ -788,6 +788,8 @@
      under "tp:destinations" and checked here before any page uses them.
      ====================================================================== */
   const BUILTIN_COUNT = DESTINATIONS.length;
+  const BUILTIN_ORIGINALS = DESTINATIONS.slice();
+  const BUILTIN_IDS = new Set(BUILTIN_ORIGINALS.map((dest) => dest.id));
   const CUSTOM_KEY = "tp:destinations";
   const CUSTOM_MAX = 60;
   const PHOTO_DATA_MAX = 1600000;
@@ -826,6 +828,21 @@
       currency: raw.currency, costLevel: level, costs, photo: validPhoto(raw.photo), custom: true
     };
   }
+  function dedupe(items) {
+    const seen = new Set();
+    return items.filter((item) => (seen.has(item.id) ? false : seen.add(item.id)));
+  }
+  /* A stored row with a built-in id is an admin's edit of that destination; any other id is a new one. */
+  function applyDestinationRows(items) {
+    (items || []).forEach((item) => {
+      if (BUILTIN_IDS.has(item.id)) {
+        const index = DESTINATIONS.findIndex((dest) => dest.id === item.id);
+        DESTINATIONS[index] = Object.assign({}, item, { custom: false, edited: true });
+      } else if (!DESTINATIONS.some((dest) => dest.id === item.id)) {
+        DESTINATIONS.push(item);
+      }
+    });
+  }
   function readCustomDestinations() {
     const raw = storageGet(CUSTOM_KEY);
     if (!raw.ok) return { items: [], damaged: false, blocked: true };
@@ -834,21 +851,19 @@
     try { doc = JSON.parse(raw.value); } catch (error) { doc = null; }
     const list = doc && Array.isArray(doc.items) ? doc.items : null;
     if (!list) return { items: [], damaged: true, blocked: false };
-    const taken = new Set(DESTINATIONS.slice(0, BUILTIN_COUNT).map((dest) => dest.id));
-    const items = list.slice(0, CUSTOM_MAX).map((item) => cleanCustomDestination(item, taken)).filter(Boolean);
-    return { items, damaged: items.length !== list.length, blocked: false };
+    const items = list.slice(0, CUSTOM_MAX + BUILTIN_COUNT).map((item) => cleanCustomDestination(item, new Set())).filter(Boolean);
+    return { items: dedupe(items), damaged: items.length !== list.length, blocked: false };
   }
   /* With the database on, CUSTOM_KEY is only this browser's copy of the "destinations" table. */
   function fetchCloudDestinations() {
     return cloudFetch("/rest/v1/destinations?select=id,data&order=updated_at.desc").then((rows) => {
-      const taken = new Set(DESTINATIONS.slice(0, BUILTIN_COUNT).map((dest) => dest.id));
-      const items = (Array.isArray(rows) ? rows : []).map((row) => cleanCustomDestination(Object.assign({}, row && row.data, { id: row && row.id }), taken)).filter(Boolean).slice(0, CUSTOM_MAX);
+      const items = dedupe((Array.isArray(rows) ? rows : []).map((row) => cleanCustomDestination(Object.assign({}, row && row.data, { id: row && row.id }), new Set())).filter(Boolean)).slice(0, CUSTOM_MAX + BUILTIN_COUNT);
       rawSet(CUSTOM_KEY, JSON.stringify({ version: 1, items }));
       return items;
     });
   }
   const CUSTOM_LOAD = readCustomDestinations();
-  CUSTOM_LOAD.items.forEach((dest) => DESTINATIONS.push(dest));
+  applyDestinationRows(CUSTOM_LOAD.items);
 
   /* ======================================================================
      Real photos. A photo added on the Admin page is used as it is. Every
@@ -875,7 +890,7 @@
   const goodImage = (src) => typeof src === "string" && /^https:\/\/upload\.wikimedia\.org\//.test(src);
   /* The API answers in parts: follow "continue" until every page is in. */
   function queryPhotos(titles) {
-    const base = "https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=1200&pilimit=50&titles=" + encodeURIComponent(titles.slice(0, 50).join("|"));
+    const base = "https://en.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=960&pilimit=50&titles=" + encodeURIComponent(titles.slice(0, 50).join("|"));
     const found = new Map();
     const hops = new Map();
     const round = (extra, count) => fetch(base + extra)
@@ -950,7 +965,6 @@
     img.alt = "";
     img.decoding = "async";
     img.className = "dest-photo";
-    img.referrerPolicy = "no-referrer";
     img.addEventListener("load", () => { host.classList.add("has-photo"); if (onReady) onReady(photo); });
     img.addEventListener("error", () => {
       img.remove();
@@ -2303,11 +2317,11 @@
   /* With the database switched on, destinations added by admins come from it. The last copy is kept in
      this browser, so the page starts at once; the very first visit waits up to 3 seconds for the list. */
   if (cloudReady()) {
-    const shown = () => DESTINATIONS.slice(BUILTIN_COUNT);
+    let applied = CUSTOM_LOAD.items;
     const job = fetchCloudDestinations();
     const compareLater = () => job.then((items) => {
-      if (canonical(items) !== canonical(shown())) {
-        showNotice("New destinations were added by an admin.", "info", { label: "Show them", onClick: () => window.location.reload() });
+      if (canonical(items) !== canonical(applied)) {
+        showNotice("An admin updated the destinations.", "info", { label: "Show them", onClick: () => window.location.reload() });
       }
     }).catch(() => null);
     if (CUSTOM_LOAD.items.length) {
@@ -2315,7 +2329,7 @@
       compareLater();
     } else {
       Promise.race([job, new Promise((resolve) => setTimeout(() => resolve(null), 3000))]).catch(() => null).then((items) => {
-        (items || []).forEach((dest) => DESTINATIONS.push(dest));
+        if (items) { applyDestinationRows(items); applied = items; }
         start();
         compareLater();
       });
