@@ -605,6 +605,13 @@
     const markScrolled = () => document.documentElement.classList.toggle("scrolled", window.scrollY > 8);
     window.addEventListener("scroll", markScrolled, { passive: true });
     markScrolled();
+    /* pages slide up under the floating header by exactly its height */
+    const header = document.querySelector(".site-header");
+    if (header) {
+      const measure = () => document.documentElement.style.setProperty("--header-h", header.offsetHeight + "px");
+      measure();
+      if ("ResizeObserver" in window) new ResizeObserver(measure).observe(header);
+    }
     const button = document.getElementById("theme-toggle");
     if (button) button.addEventListener("click", () => switchTheme(button));
     /* A page-to-page transition that gets skipped (hidden tab, quick second click) is not an error. */

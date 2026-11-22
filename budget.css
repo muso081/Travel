@@ -638,7 +638,6 @@ input:not([type="checkbox"]):not([type="radio"]), select, textarea {
 
 /* floating glass header */
 .site-header { background: transparent; border-bottom: 0; padding-top: 10px; -webkit-backdrop-filter: none; backdrop-filter: none; transition: background-color 0.3s ease; }
-:root:not(.scrolled) .site-header { background: #0b0b22; }
 .header-inner {
   width: min(calc(var(--page) + 32px), calc(100% - 20px)); min-height: 64px; margin-bottom: 10px; padding: 0 10px 0 14px;
   border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 999px;
@@ -681,6 +680,25 @@ input:not([type="checkbox"]):not([type="radio"]), select, textarea {
 :root[data-theme="dark"] { --line-strong: #8789bc; }
 .site-header, .hero, .page-heading, .empty-trip { --line-strong: #8a8cc0; }
 :root[data-theme="dark"] input[type="checkbox"]:checked, :root[data-theme="dark"] input[type="radio"]:checked { border-color: var(--teal-ink); }
+
+/* the header floats over the photo: no strip behind it, the first band runs up underneath */
+:root { --header-h: 84px; }
+.site-header { margin-bottom: calc(-1 * var(--header-h)); background: transparent !important; }
+.page-heading { padding-top: calc(64px + var(--header-h)); }
+.empty-trip { padding-top: calc(96px + var(--header-h)); }
+@media (max-width: 720px) {
+  .page-heading { padding-top: calc(44px + var(--header-h)); }
+  .empty-trip { padding-top: calc(64px + var(--header-h)); }
+}
+.scrolled .header-inner { background: rgba(14, 14, 40, 0.74); }
+/* messages at the top of a page show as a floating glass note under the header */
+.page-shell > .notice {
+  position: fixed; z-index: 45; top: calc(var(--header-h) + 4px); left: 50%; transform: translateX(-50%);
+  width: min(var(--page), calc(100% - 32px)); margin: 0;
+  box-shadow: 0 18px 44px -16px rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(20px) saturate(170%); backdrop-filter: blur(20px) saturate(170%);
+}
+@media print { .site-header { margin-bottom: 0; } .page-heading, .empty-trip { padding-top: 24px; } .page-shell > .notice { position: static; transform: none; } }
 
 /* ==========================================================================
    Budget
