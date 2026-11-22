@@ -522,6 +522,7 @@ h2 { font-weight: 500; }
   .hero, .page-heading, .empty-trip { background: none; color: #000; margin-inline: 0; padding-inline: 0; }
   .header-cta { display: none !important; }
 }
+.site-footer a { display: inline-flex; align-items: center; min-height: 32px; color: var(--teal-ink); font-weight: 650; }
 
 /* ==========================================================================
    Itinerary

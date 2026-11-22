@@ -522,6 +522,7 @@ h2 { font-weight: 500; }
   .hero, .page-heading, .empty-trip { background: none; color: #000; margin-inline: 0; padding-inline: 0; }
   .header-cta { display: none !important; }
 }
+.site-footer a { display: inline-flex; align-items: center; min-height: 32px; color: var(--teal-ink); font-weight: 650; }
 
 /* ==========================================================================
    Explore (index.html)
@@ -907,3 +908,10 @@ h2 { font-weight: 500; }
 @media print { .fav-button, .dest-region, .results-tools, .hero-search { display: none !important; } }
 .hero-search input[type="search"] { border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .fav-button:focus-visible, .photo-credit:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; box-shadow: 0 0 0 6px #0b0b22; }
+
+/* ---------- photo frames: shimmer while loading, initials if no photo ---------- */
+.photo-frame { position: relative; overflow: hidden; background: linear-gradient(110deg, #17173a 30%, #26265a 50%, #17173a 70%) 0 0 / 300% 100% #17173a; animation: frame-shimmer 1.5s linear infinite; }
+.photo-frame.has-photo, .photo-frame.no-photo { animation: none; }
+.photo-frame.no-photo { background: radial-gradient(80% 90% at 85% 0%, rgba(64, 64, 242, 0.55), transparent 60%), radial-gradient(70% 80% at 0% 100%, rgba(168, 85, 247, 0.35), transparent 60%), #12123a; }
+.photo-frame.no-photo::before { content: attr(data-initials); position: absolute; inset: 0 0 22% 0; display: grid; place-items: center; color: rgba(255, 255, 255, 0.28); font-family: var(--serif); font-size: clamp(3rem, 2rem + 4vw, 5rem); letter-spacing: 0.04em; }
+@keyframes frame-shimmer { to { background-position: -150% 0; } }

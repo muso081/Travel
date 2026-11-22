@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#0b0b22">
+    <meta name="description" content="Add, edit and remove destinations with real photos. They appear on Explore in this browser.">
+    <title>Destination admin · TravelTogether</title>
+    <link rel="icon" type="image/svg+xml" href="./logo.svg">
+    <link rel="stylesheet" href="./admin.css?v=50c660c9db">
+    <script>(function () {
+  var theme = null;
+  try { theme = window.localStorage.getItem("tp:theme"); } catch (error) {}
+  if (theme !== "light" && theme !== "dark") {
+    theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  document.documentElement.setAttribute("data-theme", theme);
+  var meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", theme === "dark" ? "#060b18" : "#f8fafc");
+})();</script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="./index.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 3 3 10.6l7 2.6L12.8 21 21 3z"/><path d="M10 13.2 21 3"/></svg></span><span>TravelTogether</span></a>
+        <nav class="primary-nav" aria-label="Primary">
+          <a href="./index.html">Explore</a>
+          <a href="./itinerary.html">Itinerary</a>
+          <a href="./budget.html">Budget</a>
+          <a href="./packing.html">Packing</a>
+        </nav>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch theme" title="Switch theme">
+          <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z"/></svg>
+          <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>
+        </button>
+        <a class="header-cta" href="./index.html#trip-form">Plan a trip<span class="header-cta-arrow"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10h12M11 5l5 5-5 5"/></svg></span></a>
+      </div>
+    </header>
+    <main id="main" class="page-shell" tabindex="-1">
+      <noscript>
+        <p class="notice" data-kind="warning"><span class="notice-text">The admin page needs JavaScript. Please turn it on and reload.</span></p>
+      </noscript>
+
+      <div class="page-heading">
+        <div>
+          <h1 id="page-title">Destination admin</h1>
+          <p class="lede">Add your own destinations with a real photo. They appear on Explore, with plans, details and trips, in this browser.</p>
+        </div>
+        <div class="toolbar" role="group" aria-label="Destination tools">
+          <button class="button button-primary" type="button" id="add-dest"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 4v12M4 10h12"/></svg>Add destination</button>
+          <button class="button button-secondary" type="button" id="import-button">Import</button>
+          <input id="import-file" type="file" accept="application/json,.json" hidden>
+          <button class="button button-secondary" type="button" id="export-button">Export</button>
+        </div>
+      </div>
+
+      <div class="notice" id="notice" hidden>
+        <p class="notice-text"></p>
+        <button class="icon-button" id="notice-close" type="button" aria-label="Dismiss message"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
+      </div>
+
+      <section class="panel admin-panel" aria-labelledby="table-title">
+        <div class="admin-head">
+          <div>
+            <h2 id="table-title">All destinations</h2>
+            <p class="muted" id="admin-count"></p>
+          </div>
+          <div class="admin-tools">
+            <input id="admin-search" type="search" aria-label="Search destinations" placeholder="Search by name, country or region" autocomplete="off">
+            <div class="seg" role="group" aria-label="Show">
+              <button type="button" class="seg-button" data-show="all" aria-pressed="true">All</button>
+              <button type="button" class="seg-button" data-show="custom" aria-pressed="false">Added</button>
+              <button type="button" class="seg-button" data-show="builtin" aria-pressed="false">Built-in</button>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <caption class="visually-hidden">Destinations. Added ones can be edited or deleted; built-in ones can be copied as a starting point.</caption>
+            <thead>
+              <tr><th scope="col">Photo</th><th scope="col">Destination</th><th scope="col">Region</th><th scope="col">Sample cost a day</th><th scope="col">Source</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr>
+            </thead>
+            <tbody id="admin-rows"></tbody>
+          </table>
+        </div>
+        <p class="admin-empty muted" id="admin-empty" hidden>No destinations match.</p>
+      </section>
+
+      <dialog class="dialog dest-dialog" id="dest-dialog" aria-labelledby="form-title">
+        <form class="dest-form" id="dest-form" novalidate>
+          <div class="form-head">
+            <h2 id="form-title">Add destination</h2>
+            <button class="icon-button" type="button" id="form-close" aria-label="Close without saving"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
+          </div>
+          <p class="form-error" id="form-error" role="alert" hidden></p>
+          <div class="form-grid">
+            <div class="form-main">
+              <div class="pair">
+                <div class="field"><label for="f-name">Name <span class="req" aria-hidden="true">*</span></label><input id="f-name" maxlength="60" required aria-describedby="f-name-error"><p class="field-error" id="f-name-error" hidden></p></div>
+                <div class="field"><label for="f-country">Country <span class="req" aria-hidden="true">*</span></label><input id="f-country" maxlength="60" required aria-describedby="f-country-error"><p class="field-error" id="f-country-error" hidden></p></div>
+              </div>
+              <div class="pair">
+                <div class="field"><label for="f-region">Region <span class="req" aria-hidden="true">*</span></label><select id="f-region"></select></div>
+                <div class="field"><label for="f-currency">Currency <span class="req" aria-hidden="true">*</span></label><select id="f-currency"></select></div>
+              </div>
+              <fieldset class="field" aria-describedby="f-activities-error">
+                <legend>Good for <span class="req" aria-hidden="true">*</span></legend>
+                <div class="choice-group" id="f-activities"></div>
+                <p class="field-error" id="f-activities-error" hidden></p>
+              </fieldset>
+              <div class="field"><label for="f-blurb">Short description <span class="req" aria-hidden="true">*</span></label><textarea id="f-blurb" maxlength="400" rows="3" aria-describedby="f-blurb-error"></textarea><p class="field-error" id="f-blurb-error" hidden></p></div>
+              <div class="field"><label for="f-highlights">Highlights <span class="req" aria-hidden="true">*</span></label><p class="hint" id="f-highlights-hint">One per line, up to 6. Plans use them as the days' sights.</p><textarea id="f-highlights" rows="4" aria-describedby="f-highlights-hint f-highlights-error"></textarea><p class="field-error" id="f-highlights-error" hidden></p></div>
+              <div class="pair">
+                <div class="field"><label for="f-best">Best time to go</label><input id="f-best" maxlength="100" placeholder="e.g. April to June"></div>
+                <div class="field"><span class="label" id="f-stay-label">Ideal stay, days <span class="req" aria-hidden="true">*</span></span>
+                  <div class="range" role="group" aria-labelledby="f-stay-label"><input id="f-stay-min" type="number" min="1" max="30" step="1" inputmode="numeric" aria-label="Shortest stay in days" aria-describedby="f-stay-error"><span aria-hidden="true">to</span><input id="f-stay-max" type="number" min="1" max="30" step="1" inputmode="numeric" aria-label="Longest stay in days" aria-describedby="f-stay-error"></div>
+                  <p class="field-error" id="f-stay-error" hidden></p></div>
+              </div>
+              <fieldset class="field costs" aria-describedby="f-costs-hint f-costs-error">
+                <legend>Sample costs per person <span class="req" aria-hidden="true">*</span></legend>
+                <p class="hint" id="f-costs-hint">In the destination's currency. Plans and budgets are built from these.</p>
+                <div class="cost-grid">
+                  <div class="field"><label for="f-cost-stay">Hotel a night</label><input id="f-cost-stay" type="number" min="0" step="any" inputmode="decimal"></div>
+                  <div class="field"><label for="f-cost-food">Food a day</label><input id="f-cost-food" type="number" min="0" step="any" inputmode="decimal"></div>
+                  <div class="field"><label for="f-cost-transport">Transport a day</label><input id="f-cost-transport" type="number" min="0" step="any" inputmode="decimal"></div>
+                  <div class="field"><label for="f-cost-activities">Activities a day</label><input id="f-cost-activities" type="number" min="0" step="any" inputmode="decimal"></div>
+                </div>
+                <div class="field"><label for="f-level">Price level</label><select id="f-level"></select></div>
+                <p class="field-error" id="f-costs-error" hidden></p>
+              </fieldset>
+            </div>
+            <aside class="form-photo" aria-labelledby="photo-title">
+              <h3 id="photo-title">Photo</h3>
+              <div class="photo-preview photo-frame no-photo" id="f-photo-preview" data-initials="?"></div>
+              <p class="photo-status" id="f-photo-status" aria-live="polite">No photo yet. Find one on Wikipedia, upload your own, or paste a link.</p>
+              <button class="button button-primary" type="button" id="f-photo-find">Find a real photo</button>
+              <label class="button button-secondary upload-button" for="f-photo-file">Upload a photo</label>
+              <input id="f-photo-file" class="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp">
+              <div class="field"><label for="f-photo-url">Or paste an image link (https)</label><input id="f-photo-url" type="url" inputmode="url" placeholder="https://…"></div>
+              <button class="button button-text button-small" type="button" id="f-photo-clear" hidden>Remove photo</button>
+            </aside>
+          </div>
+          <div class="dialog-actions">
+            <button class="button button-secondary" type="button" id="form-cancel">Cancel</button>
+            <button class="button button-primary" type="submit" id="form-save">Save destination</button>
+          </div>
+        </form>
+      </dialog>
+    </main>
+    <div id="live" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+    <footer class="site-footer">
+      <span>Made for the miles between here and there.</span>
+      <span>Your plans stay in this browser. Nothing is uploaded.</span>
+      <a href="./admin.html">Destination admin</a>
+    </footer>
+    <script src="./admin.js?v=b816f8ccf8"></script>
+  </body>
+</html>
