@@ -8,7 +8,7 @@
     <meta name="description" content="Track planned and paid expenses against a total budget, by category.">
     <title>Budget · TravelTogether</title>
     <link rel="icon" type="image/svg+xml" href="./logo.svg">
-    <link rel="stylesheet" href="./budget.css?v=3bf33e2177">
+    <link rel="stylesheet" href="./budget.css?v=188984a09c">
     <script>(function () {
   var theme = null;
   try { theme = window.localStorage.getItem("tp:theme"); } catch (error) {}
@@ -19,6 +19,7 @@
   var meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute("content", theme === "dark" ? "#060b18" : "#f8fafc");
 })();</script>
+    <script type="speculationrules">{"prefetch": [{"source": "document", "where": {"selector_matches": ".primary-nav a, .footer-links a, .header-cta, .brand"}, "eagerness": "moderate"}]}</script>
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to main content</a>
@@ -299,6 +300,6 @@
         <p class="footer-legal"><a href="./privacy.html">Privacy</a><a href="./terms.html">Terms</a><a href="#main">Back to top ↑</a></p>
       </div>
     </footer>
-    <script src="./budget.js?v=74f670dd22"></script>
+    <script src="./budget.js?v=7c7c29a1bb"></script>
   </body>
 </html>

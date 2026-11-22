@@ -598,6 +598,83 @@
     }).catch((error) => setSyncState("error", error.message));
   }
 
+  /* iPhone-style tab press: the glass bubble squishes over to the tapped tab first,
+     then the next page loads (and the header shows a loading shine until it does). */
+  function initNavLens() {
+    const root = document.documentElement;
+    const nav = document.querySelector(".primary-nav");
+    const calm = () => Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    const isPageLink = (link, event) => link && link.href && !link.hasAttribute("download") && (!link.target || link.target === "_self") &&
+      event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey &&
+      link.origin === window.location.origin && link.pathname !== window.location.pathname;
+    let going = false;
+    /* arrived from a bubble move: the bubble is already over this tab, so the page just crossfades */
+    try {
+      if (window.sessionStorage.getItem("tp:lens")) {
+        window.sessionStorage.removeItem("tp:lens");
+        root.classList.add("lens-arrived");
+        window.setTimeout(() => root.classList.remove("lens-arrived"), 1200);
+      }
+    } catch (error) { /* storage blocked */ }
+
+    /* any link to another page of the site: show the loading shine straight away */
+    document.addEventListener("click", (event) => {
+      const link = event.target.closest && event.target.closest("a[href]");
+      if (!event.defaultPrevented && isPageLink(link, event)) root.classList.add("is-navigating");
+    });
+    window.addEventListener("pageshow", (event) => {
+      if (!event.persisted) return;   /* came back with the Back button: undo the half-finished move */
+      going = false;
+      root.classList.remove("is-navigating");
+      if (nav) {
+        nav.classList.remove("lens-moving");
+        nav.querySelectorAll(".nav-lens").forEach((lens) => lens.remove());
+        nav.querySelectorAll(".is-target, .is-pressed").forEach((link) => link.classList.remove("is-target", "is-pressed"));
+      }
+    });
+    if (!nav) return;
+
+    const release = () => nav.querySelectorAll(".is-pressed").forEach((link) => link.classList.remove("is-pressed"));
+    nav.addEventListener("pointerdown", (event) => {
+      const link = event.target.closest("a");
+      if (link && event.button === 0) link.classList.add("is-pressed");
+    });
+    ["pointerup", "pointercancel", "pointerleave"].forEach((type) => nav.addEventListener(type, release));
+
+    nav.addEventListener("click", (event) => {
+      const link = event.target.closest("a[href]");
+      if (!isPageLink(link, event)) return;
+      if (going) { event.preventDefault(); return; }
+      const from = nav.querySelector('a[aria-current="page"]');
+      if (calm() || !from || typeof link.animate !== "function") return;   /* plain, instant navigation */
+      event.preventDefault();
+      going = true;
+      const a = { x: from.offsetLeft, y: from.offsetTop, w: from.offsetWidth, h: from.offsetHeight };
+      const b = { x: link.offsetLeft, y: link.offsetTop, w: link.offsetWidth, h: link.offsetHeight };
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, w: (a.w + b.w) / 2 + Math.abs(b.x - a.x) * 0.45 };
+      const lens = document.createElement("span");
+      lens.className = "nav-lens";
+      lens.setAttribute("aria-hidden", "true");
+      Object.assign(lens.style, { left: b.x + "px", top: b.y + "px", width: b.w + "px", height: b.h + "px" });
+      nav.append(lens);
+      nav.classList.add("lens-moving");
+      link.classList.add("is-target");
+      const at = (box, w, sx, sy, offset) => Object.assign({ left: box.x + "px", top: box.y + "px", width: w + "px", transform: "scale(" + sx + ", " + sy + ")" }, offset === undefined ? {} : { offset });
+      lens.animate([
+        at(a, a.w, 1, 1),
+        at(a, a.w, 1.08, 1.1, 0.14),                                   /* lifts as it lets go */
+        { left: mid.x - (mid.w - (a.w + b.w) / 2) / 2 + "px", top: mid.y + "px", width: mid.w + "px", transform: "scale(1.04, 0.86)", offset: 0.5 }, /* stretches while it travels */
+        at(b, b.w, 0.97, 1.06, 0.8),                                   /* lands with a little wobble */
+        at(b, b.w, 1, 1)
+      ], { duration: 420, easing: "cubic-bezier(0.32, 0.72, 0.24, 1)" });
+      window.setTimeout(() => {
+        root.classList.add("is-navigating");
+        try { window.sessionStorage.setItem("tp:lens", "1"); } catch (error) { /* private mode: only the hand-off is less smooth */ }
+        window.location.assign(link.href);
+      }, 300);
+    });
+  }
+
   function initTheme() {
     applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light", false);
     cloudBoot();
@@ -612,6 +689,7 @@
       measure();
       if ("ResizeObserver" in window) new ResizeObserver(measure).observe(header);
     }
+    initNavLens();
     const button = document.getElementById("theme-toggle");
     if (button) button.addEventListener("click", () => switchTheme(button));
     /* A page-to-page transition that gets skipped (hidden tab, quick second click) is not an error. */
