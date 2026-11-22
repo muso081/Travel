@@ -8,7 +8,7 @@
     <meta name="description" content="Track planned and paid expenses against a total budget, by category.">
     <title>Budget · TravelTogether</title>
     <link rel="icon" type="image/svg+xml" href="./logo.svg">
-    <link rel="stylesheet" href="./budget.css?v=893fa77102">
+    <link rel="stylesheet" href="./budget.css?v=0265c3bd59">
     <script>(function () {
   var theme = null;
   try { theme = window.localStorage.getItem("tp:theme"); } catch (error) {}
@@ -260,9 +260,44 @@
     </main>
     <div id="live" class="visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
     <footer class="site-footer">
-      <span>Made for the miles between here and there.</span>
-      <span>Your plans stay in this browser. Nothing is uploaded.</span>
-      <a href="./admin.html">Destination admin</a>
+      <div class="footer-top">
+        <div class="footer-brand">
+          <a class="brand" href="./index.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 3 3 10.6l7 2.6L12.8 21 21 3z"/><path d="M10 13.2 21 3"/></svg></span><span>TravelTogether</span></a>
+          <p>Made for the miles between here and there. One shared plan for the itinerary, the budget and the packing list.</p>
+          <p class="footer-save"><span aria-hidden="true"></span>Logged in, your plans sync to your account. Otherwise they stay in this browser.</p>
+        </div>
+        <nav class="footer-links" aria-label="Footer">
+          <div>
+            <h2>Plan</h2>
+            <ul>
+              <li><a href="./index.html">Explore</a></li>
+              <li><a href="./itinerary.html">Itinerary</a></li>
+              <li><a href="./budget.html">Budget</a></li>
+              <li><a href="./packing.html">Packing</a></li>
+            </ul>
+          </div>
+          <div>
+            <h2>Account</h2>
+            <ul>
+              <li><a href="./login.html">Log in</a></li>
+              <li><a href="./login.html?mode=signup">Create an account</a></li>
+              <li><a href="./admin.html">Destination admin</a></li>
+            </ul>
+          </div>
+          <div>
+            <h2>About</h2>
+            <ul>
+              <li><a href="./privacy.html">Privacy Policy</a></li>
+              <li><a href="./terms.html">Terms of Use</a></li>
+              <li><a href="https://github.com/muso081/Travel">Source code on GitHub</a></li>
+            </ul>
+          </div>
+        </nav>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2026 TravelTogether · A Web Programming team project at Gachon University</p>
+        <p class="footer-legal"><a href="./privacy.html">Privacy</a><a href="./terms.html">Terms</a><a href="#main">Back to top ↑</a></p>
+      </div>
     </footer>
     <script src="./budget.js?v=74f670dd22"></script>
   </body>
