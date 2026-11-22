@@ -969,6 +969,7 @@
     img.addEventListener("error", () => {
       img.remove();
       host.classList.add("no-photo");
+      host.dispatchEvent(new CustomEvent("photoerror"));
       console.warn("TravelTogether: a photo did not load: " + String(photo.src).slice(0, 120));
     });
     img.src = photo.src;

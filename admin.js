@@ -969,6 +969,7 @@
     img.addEventListener("error", () => {
       img.remove();
       host.classList.add("no-photo");
+      host.dispatchEvent(new CustomEvent("photoerror"));
       console.warn("TravelTogether: a photo did not load: " + String(photo.src).slice(0, 120));
     });
     img.src = photo.src;
@@ -1356,15 +1357,22 @@
     }));
     ["form-close", "form-cancel"].forEach((id) => $(id).addEventListener("click", () => $("dest-dialog").close()));
     $("f-photo-find").addEventListener("click", findPhoto);
+    $("f-photo-preview").addEventListener("photoerror", () => {
+      if (!admin.photo) return;
+      setPhoto("", "That link isn't an image the page can show. Save the picture to your computer and drop the file here instead.");
+    });
     /* drag a photo file (or an image from another tab) onto the photo panel */
     const zone = $("photo-zone");
     let depth = 0;
     const dropped = (data) => {
       const file = Array.from(data.files || []).find((item) => /^image\//.test(item.type));
       if (file) { uploadPhoto(file); return; }
-      const link = (data.getData("text/uri-list") || data.getData("text/plain") || "").split("\n")[0].trim();
+      /* an image dragged from another website: use the picture itself, not the page it links to */
+      const html = data.getData("text/html") || "";
+      const fromHtml = (/<img[^>]+src=["']([^"']+)["']/i.exec(html) || [])[1] || "";
+      const link = (fromHtml.replace(/&amp;/g, "&") || data.getData("text/uri-list") || data.getData("text/plain") || "").split("\n")[0].trim();
       if (validPhoto(link)) setPhoto(link, "Using the photo you dropped.");
-      else $("f-photo-status").textContent = "Drop an image file (JPEG, PNG or WebP).";
+      else $("f-photo-status").textContent = "That didn't come through as an image. Save the picture to your computer, then drop the file here.";
     };
     zone.addEventListener("dragenter", (event) => { event.preventDefault(); depth += 1; zone.classList.add("is-drag"); });
     zone.addEventListener("dragover", (event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; });
