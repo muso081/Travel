@@ -843,45 +843,51 @@ h2 { font-weight: 500; }
    Futuristic layer: aurora + grid in the hero, glass search, photo cards
    ========================================================================== */
 .hero { position: relative; isolation: isolate; overflow: hidden; }
+/* background photo (Trip.com style): photo + dark wash so white text stays readable */
 .hero::before {
-  content: ""; position: absolute; inset: -25%; z-index: -1; pointer-events: none;
-  background:
-    radial-gradient(32% 42% at 28% 32%, rgba(64, 64, 242, 0.5), transparent 70%),
-    radial-gradient(28% 38% at 72% 58%, rgba(168, 85, 247, 0.34), transparent 70%),
-    radial-gradient(24% 32% at 52% 92%, rgba(34, 211, 238, 0.2), transparent 70%);
-  filter: blur(40px); animation: aurora 20s ease-in-out infinite alternate;
-}
-.hero::after {
   content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
-  background-size: 64px 64px;
-  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 38%, #000 20%, transparent 78%);
-  mask-image: radial-gradient(ellipse 75% 65% at 50% 38%, #000 20%, transparent 78%);
+  background:
+    linear-gradient(180deg, rgba(7, 7, 28, 0.72) 0%, rgba(7, 7, 28, 0.42) 38%, rgba(7, 7, 28, 0.5) 70%, rgba(7, 7, 28, 0.86) 100%),
+    radial-gradient(60% 55% at 50% 42%, rgba(7, 7, 28, 0.38), transparent 75%),
+    url("./hero.jpg") center 40% / cover no-repeat,
+    var(--band-color);
+  transform-origin: 50% 60%;
+  animation: hero-drift 32s ease-in-out infinite alternate;
 }
-@keyframes aurora {
-  0% { transform: translate3d(-4%, -2%, 0) rotate(0deg) scale(1); }
-  50% { transform: translate3d(5%, 3%, 0) rotate(8deg) scale(1.08); }
-  100% { transform: translate3d(-2%, 5%, 0) rotate(-6deg) scale(1.02); }
+/* rounded lip: the page content curves up over the photo */
+.hero::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 40px; z-index: 0; pointer-events: none;
+  background: var(--bg); border-radius: 40px 40px 0 0;
 }
-.hero h1 em { text-shadow: 0 0 48px rgba(154, 154, 255, 0.55); }
+@keyframes hero-drift {
+  from { transform: scale(1); }
+  to { transform: scale(1.07) translate3d(-1%, -1%, 0); }
+}
+.hero h1, .hero-copy .lede { text-shadow: 0 2px 28px rgba(0, 0, 0, 0.55); }
+.hero-copy .lede { color: #ececfb; }
+.hero h1 em { text-shadow: 0 0 48px rgba(154, 154, 255, 0.55), 0 2px 28px rgba(0, 0, 0, 0.5); }
 .hero-eyebrow {
   display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px; border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(7, 7, 28, 0.5); border: 1px solid rgba(255, 255, 255, 0.22);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
 }
 .hero-eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #6ee7b7; box-shadow: 0 0 0 4px rgba(110, 231, 183, 0.18), 0 0 14px #6ee7b7; }
 .hero-search {
-  display: flex; align-items: center; gap: 8px; width: min(620px, 100%); margin-top: 34px; padding: 6px 6px 6px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 999px; background: rgba(255, 255, 255, 0.07);
-  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-  box-shadow: 0 20px 60px -20px rgba(64, 64, 242, 0.6);
+  display: flex; align-items: center; gap: 8px; width: min(640px, 100%); margin-top: 34px; padding: 7px 7px 7px 20px;
+  border: 1px solid #ffffff; border-radius: 999px; background: #ffffff;
+  box-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.6);
 }
-.hero-search:focus-within { border-color: #b8b8ff; box-shadow: 0 0 0 4px rgba(154, 154, 255, 0.25), 0 20px 60px -20px rgba(64, 64, 242, 0.7); }
-.hero-search svg { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--ink-2); stroke-width: 1.8; stroke-linecap: round; }
-.hero-search input { flex: 1; min-width: 0; min-height: 46px; padding: 0 4px; border: 0; background: transparent; color: #ffffff; font-size: 1.0625rem; }
-.hero-search input::placeholder { color: var(--muted); opacity: 1; }
+.hero-search:focus-within { border-color: #4040f2; box-shadow: 0 0 0 4px rgba(154, 154, 255, 0.55), 0 24px 60px -18px rgba(0, 0, 0, 0.6); }
+.hero-search svg { width: 20px; height: 20px; flex: none; fill: none; stroke: #4040f2; stroke-width: 2; stroke-linecap: round; }
+.hero-search input { flex: 1; min-width: 0; min-height: 48px; padding: 0 4px; border: 0; background: transparent; color: #0c0c1d; font-size: 1.0625rem; }
+.hero-search input::placeholder { color: #5b5d75; opacity: 1; }
 .hero-search input:focus-visible { outline: none; }
-.hero-search .button { min-height: 46px; padding-inline: 26px; border-radius: 999px; }
+.hero-search .button { min-height: 48px; padding-inline: 28px; border-radius: 999px; }
 .hero-actions { margin-top: 26px; }
+.hero-actions .button-secondary { color: #ffffff; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6); }
+.hero { padding-bottom: 104px; }
+@media (max-width: 720px) { .hero { padding-bottom: 84px; } .hero::after { height: 28px; border-radius: 28px 28px 0 0; } }
+@media print { .hero::before, .hero::after { display: none; } }
 
 /* photo cards */
 .dest-grid { gap: 24px; }
