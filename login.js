@@ -343,7 +343,7 @@
      to be in the page: row-level security in the database decides what it
      may read and write (see database.sql). Never put the secret key here.
      ====================================================================== */
-  const CLOUD_CONFIG = { url: "", key: "" };
+  const CLOUD_CONFIG = { url: "https://izrjmpqbbtbantlhqrct.supabase.co", key: "sb_publishable_17Jau0Uj5lEfiJ68padrnA_DSfy2JMo" };
   const SESSION_KEY = "tp:session";
   const SYNCED = /^tp:(trip|trips|favorites|itinerary:[\w:-]+|budget:[\w:-]+|packing:[\w:-]+)$/;
   function cloudConfig() { return window.__tpCloudConfig || CLOUD_CONFIG; }
@@ -384,7 +384,11 @@
   function cloudFetch(path, options, token) {
     const conf = cloudConfig();
     const opts = options || {};
-    const headers = { apikey: conf.key, Authorization: "Bearer " + (token || conf.key) };
+    /* A logged-in request carries the user's token. Publishable keys (sb_publishable_...) are not tokens,
+       so a visitor's request sends only the apikey header; older anon keys are sent both ways. */
+    const headers = { apikey: conf.key };
+    if (token) headers.Authorization = "Bearer " + token;
+    else if (!/^sb_/.test(conf.key)) headers.Authorization = "Bearer " + conf.key;
     if (opts.body !== undefined) headers["Content-Type"] = "application/json";
     if (opts.prefer) headers.Prefer = opts.prefer;
     return fetch(conf.url.replace(/\/+$/, "") + path, {
