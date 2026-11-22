@@ -8,7 +8,7 @@
     <meta name="description" content="Add, edit and remove destinations with real photos. They appear on Explore in this browser.">
     <title>Destination admin · TravelTogether</title>
     <link rel="icon" type="image/svg+xml" href="./logo.svg">
-    <link rel="stylesheet" href="./admin.css?v=50c660c9db">
+    <link rel="stylesheet" href="./admin.css?v=0b8b7bc715">
     <script>(function () {
   var theme = null;
   try { theme = window.localStorage.getItem("tp:theme"); } catch (error) {}
@@ -31,6 +31,7 @@
           <a href="./budget.html">Budget</a>
           <a href="./packing.html">Packing</a>
         </nav>
+        <div class="account" id="account" hidden></div>
         <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch theme" title="Switch theme">
           <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z"/></svg>
           <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>
@@ -48,7 +49,7 @@
           <h1 id="page-title">Destination admin</h1>
           <p class="lede">Add your own destinations with a real photo. They appear on Explore, with plans, details and trips, in this browser.</p>
         </div>
-        <div class="toolbar" role="group" aria-label="Destination tools">
+        <div class="toolbar" id="admin-toolbar" role="group" aria-label="Destination tools">
           <button class="button button-primary" type="button" id="add-dest"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 4v12M4 10h12"/></svg>Add destination</button>
           <button class="button button-secondary" type="button" id="import-button">Import</button>
           <input id="import-file" type="file" accept="application/json,.json" hidden>
@@ -61,7 +62,13 @@
         <button class="icon-button" id="notice-close" type="button" aria-label="Dismiss message"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
       </div>
 
-      <section class="panel admin-panel" aria-labelledby="table-title">
+      <section class="panel admin-gate" id="admin-gate" aria-labelledby="gate-title" hidden>
+        <h2 id="gate-title">Admins only</h2>
+        <p id="gate-text"></p>
+        <a class="button button-primary" id="gate-link" href="./login.html?next=admin.html">Log in</a>
+      </section>
+
+      <section class="panel admin-panel" id="admin-panel" aria-labelledby="table-title">
         <div class="admin-head">
           <div>
             <h2 id="table-title">All destinations</h2>
@@ -155,6 +162,6 @@
       <span>Your plans stay in this browser. Nothing is uploaded.</span>
       <a href="./admin.html">Destination admin</a>
     </footer>
-    <script src="./admin.js?v=b816f8ccf8"></script>
+    <script src="./admin.js?v=ad367da9e1"></script>
   </body>
 </html>

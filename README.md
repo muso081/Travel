@@ -8,6 +8,7 @@ A small travel planner that runs entirely in the browser. Pick a destination, cr
 | **Itinerary** | Day-by-day plan with a timeline, overlap warnings, print view | `itinerary.html`, `itinerary.css`, `itinerary.js` |
 | **Budget** | Total budget, planned and paid expenses, category chart, per-traveler cost | `budget.html`, `budget.css`, `budget.js` |
 | **Admin** | Add, edit and delete your own destinations with a real photo | `admin.html`, `admin.css`, `admin.js` |
+| **Log in** | Create an account, log in and out | `login.html`, `login.css`, `login.js` |
 | **Packing** | Shared checklist with per-traveler progress, templates, print view | `packing.html`, `packing.css`, `packing.js` |
 
 Shared by all pages: `logo.svg` (logo and favicon) and this `README.md`.
@@ -86,6 +87,24 @@ If something looks wrong:
 **Admin.** The **Destination admin** page (linked in every page's footer) lists every destination in a table with its photo. Add your own with a name, country, region, currency, activities, description, highlights, ideal stay and sample costs, plus a photo: **Find a real photo** looks one up on Wikipedia, or upload your own (it is resized and compressed), or paste an image link. Added destinations can be edited, deleted (after a confirmation), exported and imported as JSON, and built-in ones can be used as a template. They appear on Explore with details and plans, in this browser only: export them to share with teammates.
 
 **Back up your data.** Itinerary, Budget and Packing each have **Export** and **Import** (JSON). Importing validates the file first and never changes anything if the file is not valid. Clearing your browser's site data removes the plans, so export what you want to keep.
+
+## Accounts and the database (Supabase)
+
+The site can save each visitor's trips in a real database, so they can log in from any device. It uses [Supabase](https://supabase.com) (PostgreSQL with login), reached directly from the browser through its REST API with `fetch`; there is no server of our own and no library to install.
+
+**How it works**
+- `login.html` signs visitors up, in and out (email and password). The header shows **Log in**, or the visitor's avatar with a menu (sync status, **Destination admin** for admins, **Log out**).
+- When logged in, every change to a trip, itinerary, budget, packing list or saved destination is sent to the `user_data` table a moment later (one row per storage key), and each page brings the browser up to date with the account when it opens. Trips made before logging in are added to the account. Logging out removes the account's data from that browser.
+- Destinations added on the Admin page are stored in the `destinations` table. Everyone can read them; only accounts marked as admin can add, change or delete them, and only admins can open the Admin page.
+- Row-level security in the database enforces all of this, so the public key in the page cannot read or change anyone else's data.
+- Without the database settings the site works exactly as before, saving in the browser only.
+
+**Set it up (once)**
+1. Create a free project at supabase.com.
+2. In the dashboard open **SQL Editor**, paste all of `database.sql` and press **Run**.
+3. (Optional, simpler for testing) **Authentication → Sign In / Providers → Email**: turn off **Confirm email**, otherwise new users must click a link in their email first.
+4. In each page's script (`destinations.js`, `itinerary.js`, `budget.js`, `packing.js`, `admin.js`, `login.js`) set `CLOUD_CONFIG` to your **Project URL** and **anon/publishable key** (Project Settings → API). Never use the secret or service_role key.
+5. Create your account on the site, then make it an admin by running the last line of `database.sql` with your email.
 
 ## Themes and accessibility
 

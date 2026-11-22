@@ -524,6 +524,43 @@ h2 { font-weight: 500; }
 }
 .site-footer a { display: inline-flex; align-items: center; min-height: 32px; color: var(--teal-ink); font-weight: 650; }
 
+/* ---------- account (only shown when the database is switched on) ---------- */
+.account { display: flex; align-items: center; margin-left: auto; }
+.account[hidden] { display: none; }
+.account:not([hidden]) + .theme-toggle { margin-left: 8px; }
+.account-login {
+  display: inline-flex; align-items: center; min-height: 42px; padding: 0 18px; border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px; color: #ffffff; font-weight: 700; text-decoration: none;
+}
+.account-login:hover { background: rgba(255, 255, 255, 0.1); }
+.account-menu { position: relative; }
+.account-button {
+  display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 3px 14px 3px 3px; list-style: none; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 999px; color: #ffffff; font-weight: 650;
+}
+.account-button::-webkit-details-marker { display: none; }
+.account-button:hover { background: rgba(255, 255, 255, 0.08); }
+.account-avatar { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #4040f2, #a855f7); color: #ffffff; font-size: 0.8125rem; font-weight: 800; }
+.account-name { max-width: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-panel {
+  position: absolute; right: 0; top: calc(100% + 10px); z-index: 40; display: grid; gap: 4px; width: 270px; padding: 14px;
+  border-radius: 14px; background: #ffffff; color: #0c0c1d; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+.account-who { font-weight: 800; overflow-wrap: anywhere; }
+.account-email { color: #5b5d75; font-size: 0.875rem; overflow-wrap: anywhere; }
+.account-sync { margin: 6px 0; color: #047857; font-size: 0.8125rem; font-weight: 600; }
+.account-sync[data-state="saving"] { color: #5b5d75; }
+.account-sync[data-state="error"] { color: #be123c; }
+.account-item {
+  display: flex; align-items: center; width: 100%; min-height: 42px; padding: 0 10px; border: 0; border-radius: 8px;
+  background: transparent; color: #0c0c1d; font: inherit; font-weight: 650; text-align: left; text-decoration: none; cursor: pointer;
+}
+.account-item:hover { background: #f0f0f8; }
+.account-out { color: #be123c; }
+.account-panel :focus-visible { outline: 3px solid #4040f2; outline-offset: 2px; }
+@media (max-width: 720px) { .account-name { display: none; } .account-button { padding-right: 3px; } }
+@media print { .account { display: none !important; } }
+
 /* ==========================================================================
    Itinerary
    ========================================================================== */

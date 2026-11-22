@@ -70,8 +70,16 @@
     catch (error) { return { ok: false, value: null }; }
   }
   function storageSet(key, text) {
-    try { window.localStorage.setItem(key, text); return true; }
+    try { window.localStorage.setItem(key, text); }
     catch (error) { return false; }
+    queueSync(key);
+    return true;
+  }
+  function storageRemove(key) {
+    try { window.localStorage.removeItem(key); }
+    catch (error) { return false; }
+    queueSync(key);
+    return true;
   }
 
   /* ---- calendar dates (YYYY-MM-DD) without timezone shifts ---- */
@@ -323,8 +331,272 @@
       done();
     }
   }
+
+  /* ======================================================================
+     Accounts and the database (Supabase, used through its REST API).
+     When CLOUD_CONFIG is filled in, visitors can create an account and log
+     in. Their trips and plans are then saved in the database's "user_data"
+     table and follow them to any browser, and destinations added on the
+     Admin page are stored in the "destinations" table for every visitor.
+     With CLOUD_CONFIG empty the site works as before, in this browser only.
+     The key is the project's PUBLIC (anon/publishable) key, which is meant
+     to be in the page: row-level security in the database decides what it
+     may read and write (see database.sql). Never put the secret key here.
+     ====================================================================== */
+  const CLOUD_CONFIG = { url: "", key: "" };
+  const SESSION_KEY = "tp:session";
+  const SYNCED = /^tp:(trip|trips|favorites|itinerary:[\w:-]+|budget:[\w:-]+|packing:[\w:-]+)$/;
+  function cloudConfig() { return window.__tpCloudConfig || CLOUD_CONFIG; }
+  function cloudReady() {
+    const conf = cloudConfig();
+    return Boolean(conf.url && conf.key) && typeof fetch === "function" && (window.__tpCloud === true || !navigator.webdriver);
+  }
+  function rawSet(key, text) { try { window.localStorage.setItem(key, text); return true; } catch (error) { return false; } }
+  function rawRemove(key) { try { window.localStorage.removeItem(key); return true; } catch (error) { return false; } }
+  function readSession() {
+    try {
+      const value = JSON.parse(window.localStorage.getItem(SESSION_KEY));
+      return value && typeof value.access_token === "string" && value.user && typeof value.user.id === "string" ? value : null;
+    } catch (error) { return null; }
+  }
+  function writeSession(session) {
+    if (session) rawSet(SESSION_KEY, JSON.stringify(session));
+    else rawRemove(SESSION_KEY);
+  }
+  function sessionFrom(data, previous) {
+    if (!data || typeof data.access_token !== "string" || !data.user || typeof data.user.id !== "string") return null;
+    const meta = data.user.user_metadata || {};
+    return {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: Number(data.expires_at) || Math.floor(Date.now() / 1000) + (Number(data.expires_in) || 3600),
+      user: { id: data.user.id, email: data.user.email || "", name: cleanName(meta.display_name) || (previous ? previous.user.name : "") },
+      admin: previous ? previous.admin === true : false
+    };
+  }
+  function cleanName(value) { return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, 60) : ""; }
+  function cloudError(data, status) {
+    const text = data && (data.error_description || data.msg || data.message || data.error);
+    const error = new Error(typeof text === "string" && text ? text : "The server answered " + status + ".");
+    error.status = status;
+    return error;
+  }
+  function cloudFetch(path, options, token) {
+    const conf = cloudConfig();
+    const opts = options || {};
+    const headers = { apikey: conf.key, Authorization: "Bearer " + (token || conf.key) };
+    if (opts.body !== undefined) headers["Content-Type"] = "application/json";
+    if (opts.prefer) headers.Prefer = opts.prefer;
+    return fetch(conf.url.replace(/\/+$/, "") + path, {
+      method: opts.method || "GET", headers, keepalive: opts.keepalive === true,
+      body: opts.body === undefined ? undefined : JSON.stringify(opts.body)
+    }).then((response) => response.text().then((text) => {
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch (error) { data = null; }
+      if (!response.ok) throw cloudError(data, response.status);
+      return data;
+    }), () => { throw new Error("Couldn't reach the server. Check your connection."); });
+  }
+  let refreshing = null;
+  function freshSession() {
+    const session = readSession();
+    if (!session) return Promise.resolve(null);
+    if (session.expires_at * 1000 - Date.now() > 60000) return Promise.resolve(session);
+    if (!refreshing) {
+      refreshing = cloudFetch("/auth/v1/token?grant_type=refresh_token", { method: "POST", body: { refresh_token: session.refresh_token } })
+        .then((data) => { const next = sessionFrom(data, session); writeSession(next); return next; })
+        .catch((error) => { if (error.status) writeSession(null); return error.status ? null : session; })
+        .then((value) => { refreshing = null; return value; });
+    }
+    return refreshing;
+  }
+  function cloudData(path, options) {
+    return freshSession().then((session) => {
+      if (!session) throw new Error("You're logged out. Log in again to save to your account.");
+      return cloudFetch(path, options, session.access_token);
+    });
+  }
+  /* Compare stored JSON by meaning: the database may reorder object keys. */
+  function canonical(value) {
+    if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
+    if (value && typeof value === "object") return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + canonical(value[key])).join(",") + "}";
+    return JSON.stringify(value);
+  }
+  function localSyncedKeys() {
+    const keys = [];
+    try { for (let index = 0; index < window.localStorage.length; index += 1) { const key = window.localStorage.key(index); if (SYNCED.test(key)) keys.push(key); } }
+    catch (error) { /* storage blocked */ }
+    return keys;
+  }
+
+  /* ---- saving changes to the account: every write of a synced key is queued and sent shortly after ---- */
+  const pendingKeys = new Set();
+  let syncTimer = 0;
+  let cloudSyncState = { state: "saved", message: "" };
+  function setSyncState(state, message) {
+    cloudSyncState = { state, message: message || "" };
+    const line = document.getElementById("account-sync");
+    if (line) {
+      line.dataset.state = state;
+      line.textContent = state === "saving" ? "Saving to your account…" : state === "error" ? "Not saved: " + cloudSyncState.message : "Everything is saved to your account.";
+    }
+  }
+  function queueSync(key) {
+    if (!SYNCED.test(key) || !cloudReady() || !readSession()) return;
+    pendingKeys.add(key);
+    setSyncState("saving");
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => flushSync(false), 600);
+  }
+  function flushSync(leaving) {
+    clearTimeout(syncTimer);
+    const session = readSession();
+    if (!session || !pendingKeys.size) return Promise.resolve();
+    const keys = Array.from(pendingKeys);
+    pendingKeys.clear();
+    const upserts = [];
+    const removals = [];
+    keys.forEach((key) => {
+      const raw = storageGet(key);
+      if (raw.value === null) { removals.push(key); return; }
+      try { upserts.push({ user_id: session.user.id, key, value: JSON.parse(raw.value) }); } catch (error) { /* not JSON: skip */ }
+    });
+    const send = (path, options) => (leaving ? cloudFetch(path, Object.assign({ keepalive: true }, options), session.access_token) : cloudData(path, options));
+    const jobs = [];
+    if (upserts.length) jobs.push(send("/rest/v1/user_data?on_conflict=user_id,key", { method: "POST", body: upserts, prefer: "resolution=merge-duplicates,return=minimal" }));
+    if (removals.length) jobs.push(send("/rest/v1/user_data?key=in." + encodeURIComponent("(" + removals.map((key) => '"' + key + '"').join(",") + ")"), { method: "DELETE", prefer: "return=minimal" }));
+    return Promise.all(jobs).then(() => { if (!pendingKeys.size) setSyncState("saved"); }, (error) => {
+      keys.forEach((key) => pendingKeys.add(key));
+      setSyncState("error", error.message);
+    });
+  }
+  /* Bring the account's saved data into this browser. "merge" (right after logging in) keeps
+     what was made here before logging in and uploads it; "mirror" makes this browser match the account. */
+  function applyRows(rows, mode) {
+    const inCloud = new Set();
+    let changed = false;
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+      if (!row || !SYNCED.test(row.key) || row.value === undefined) return;
+      inCloud.add(row.key);
+      let local = null;
+      try { local = JSON.parse(storageGet(row.key).value); } catch (error) { local = null; }
+      if (canonical(local) !== canonical(row.value)) { rawSet(row.key, JSON.stringify(row.value)); changed = true; }
+    });
+    localSyncedKeys().forEach((key) => {
+      if (inCloud.has(key) || pendingKeys.has(key)) return;
+      if (mode === "merge") pendingKeys.add(key);
+      else { rawRemove(key); changed = true; }
+    });
+    return changed;
+  }
+  function loadProfile(session) {
+    return cloudData("/rest/v1/profiles?select=display_name,is_admin&id=eq." + encodeURIComponent(session.user.id)).then((rows) => {
+      const profile = Array.isArray(rows) && rows[0] ? rows[0] : {};
+      const current = readSession() || session;
+      current.admin = profile.is_admin === true;
+      current.user.name = cleanName(profile.display_name) || current.user.name;
+      writeSession(current);
+      return current;
+    });
+  }
+  function afterLogin(data) {
+    const session = sessionFrom(data, null);
+    if (!session) return Promise.reject(new Error("The server sent an answer the site didn't understand."));
+    writeSession(session);
+    return loadProfile(session)
+      .then(() => cloudData("/rest/v1/user_data?select=key,value"))
+      .then((rows) => { applyRows(rows, "merge"); return flushSync(false); })
+      .then(() => readSession());
+  }
+  function logIn(email, password) {
+    return cloudFetch("/auth/v1/token?grant_type=password", { method: "POST", body: { email, password } }).then(afterLogin);
+  }
+  function signUp(name, email, password) {
+    return cloudFetch("/auth/v1/signup", { method: "POST", body: { email, password, data: { display_name: name } } })
+      .then((data) => (data && data.access_token ? afterLogin(data) : { needsConfirmation: true }));
+  }
+  function logOut() {
+    return flushSync(false).catch(() => null).then(() => {
+      const session = readSession();
+      return session ? cloudFetch("/auth/v1/logout", { method: "POST" }, session.access_token).catch(() => null) : null;
+    }).then(() => {
+      /* leave nothing of this account behind in a shared browser */
+      localSyncedKeys().forEach(rawRemove);
+      writeSession(null);
+      window.location.href = "./index.html";
+    });
+  }
+
+  /* ---- the account button in the header ---- */
+  function initialsFor(text) {
+    return String(text || "?").split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join("") || "?";
+  }
+  function renderAccount() {
+    const host = document.getElementById("account");
+    if (!host) return;
+    host.replaceChildren();
+    host.hidden = !cloudReady();
+    if (host.hidden) return;
+    const session = readSession();
+    const page = window.location.pathname.split("/").pop() || "index.html";
+    if (!session) {
+      const link = el("a", "account-login", "Log in");
+      link.href = "./login.html" + (page === "login.html" ? "" : "?next=" + encodeURIComponent(page));
+      host.append(link);
+      return;
+    }
+    const name = session.user.name || session.user.email;
+    const menu = el("details", "account-menu");
+    const summary = el("summary", "account-button");
+    summary.setAttribute("aria-label", "Account menu for " + name);
+    summary.append(el("span", "account-avatar", initialsFor(name)), el("span", "account-name", name));
+    const panel = el("div", "account-panel");
+    panel.append(el("p", "account-who", name), el("p", "account-email", session.user.email));
+    const sync = el("p", "account-sync");
+    sync.id = "account-sync";
+    sync.setAttribute("role", "status");
+    panel.append(sync);
+    if (session.admin) {
+      const admin = el("a", "account-item", "Destination admin");
+      admin.href = "./admin.html";
+      panel.append(admin);
+    }
+    const out = el("button", "account-item account-out", "Log out");
+    out.type = "button";
+    out.addEventListener("click", () => { out.disabled = true; out.textContent = "Logging out…"; logOut(); });
+    panel.append(out);
+    menu.append(summary, panel);
+    menu.addEventListener("keydown", (event) => { if (event.key === "Escape" && menu.open) { menu.open = false; summary.focus(); } });
+    document.addEventListener("click", (event) => { if (menu.open && !menu.contains(event.target)) menu.open = false; });
+    host.append(menu);
+    setSyncState(cloudSyncState.state, cloudSyncState.message);
+  }
+  let pulledThisPage = false;
+  function cloudBoot() {
+    if (!cloudReady()) return;
+    renderAccount();
+    window.addEventListener("pagehide", () => { flushSync(true); });
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushSync(true); });
+    if (!readSession() || pulledThisPage) return;
+    pulledThisPage = true;
+    freshSession().then((session) => {
+      if (!session) { renderAccount(); return null; }
+      return Promise.all([loadProfile(session), cloudData("/rest/v1/user_data?select=key,value")]).then((results) => {
+        renderAccount();
+        if (!applyRows(results[1], "mirror")) return;
+        /* this browser was behind the account: show the account's data (once) */
+        let last = 0;
+        try { last = Number(window.sessionStorage.getItem("tp:pulled")) || 0; } catch (error) { last = 0; }
+        if (Date.now() - last < 8000) return;
+        try { window.sessionStorage.setItem("tp:pulled", String(Date.now())); } catch (error) { /* ignore */ }
+        window.location.reload();
+      });
+    }).catch((error) => setSyncState("error", error.message));
+  }
+
   function initTheme() {
     applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light", false);
+    cloudBoot();
     const button = document.getElementById("theme-toggle");
     if (button) button.addEventListener("click", () => switchTheme(button));
     /* A page-to-page transition that gets skipped (hidden tab, quick second click) is not an error. */
@@ -562,6 +834,15 @@
     const items = list.slice(0, CUSTOM_MAX).map((item) => cleanCustomDestination(item, taken)).filter(Boolean);
     return { items, damaged: items.length !== list.length, blocked: false };
   }
+  /* With the database on, CUSTOM_KEY is only this browser's copy of the "destinations" table. */
+  function fetchCloudDestinations() {
+    return cloudFetch("/rest/v1/destinations?select=id,data&order=updated_at.desc").then((rows) => {
+      const taken = new Set(DESTINATIONS.slice(0, BUILTIN_COUNT).map((dest) => dest.id));
+      const items = (Array.isArray(rows) ? rows : []).map((row) => cleanCustomDestination(Object.assign({}, row && row.data, { id: row && row.id }), taken)).filter(Boolean).slice(0, CUSTOM_MAX);
+      rawSet(CUSTOM_KEY, JSON.stringify({ version: 1, items }));
+      return items;
+    });
+  }
   const CUSTOM_LOAD = readCustomDestinations();
   CUSTOM_LOAD.items.forEach((dest) => DESTINATIONS.push(dest));
 
@@ -699,8 +980,25 @@
   const daily = (dest) => dest.costs.stay + dest.costs.food + dest.costs.transport + dest.costs.activities;
   const fold = (text) => String(text).toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "");
 
+  /* Without the database, this browser's storage is the store. With it, the "destinations" table is,
+     and this browser keeps a copy so Explore can start at once. */
   function save() {
     return storageSet(CUSTOM_KEY, JSON.stringify({ version: 1, items: admin.custom }));
+  }
+  const ONLINE = cloudReady();
+  function storeRows(list) {
+    if (!ONLINE || !list.length) return Promise.resolve();
+    return cloudData("/rest/v1/destinations?on_conflict=id", { method: "POST", body: list.map((dest) => ({ id: dest.id, data: dest })), prefer: "resolution=merge-duplicates,return=minimal" });
+  }
+  function dropRow(dest) {
+    if (!ONLINE) return Promise.resolve();
+    return cloudData("/rest/v1/destinations?id=eq." + encodeURIComponent(dest.id), { method: "DELETE", prefer: "return=minimal" });
+  }
+  function commit(change, revert) {
+    /* apply locally, keep the copy; offline mode fails if storage is full */
+    change();
+    if (!save() && !ONLINE) { revert(); return false; }
+    return true;
   }
 
   /* ---- the table ---- */
@@ -911,21 +1209,26 @@
     event.preventDefault();
     const dest = readForm();
     if (!dest) return;
-    const before = admin.custom.slice();
-    if (admin.editing) admin.custom[admin.custom.indexOf(admin.editing)] = dest;
-    else if (admin.custom.length >= CUSTOM_MAX) { showFormError("You can add up to " + CUSTOM_MAX + " destinations."); return; }
-    else admin.custom.unshift(dest);
-    if (!save()) {
-      admin.custom = before;
-      showFormError("This browser's storage is full, so the destination wasn't saved. Use a smaller photo (or a link instead of an upload), or delete another destination.");
-      return;
-    }
-    const added = !admin.editing;
-    $("dest-dialog").close();
-    renderTable();
-    const message = (added ? "Added " : "Saved ") + dest.name + ". It's on Explore now.";
-    showNotice(message, "success");
-    announce(message);
+    if (!admin.editing && admin.custom.length >= CUSTOM_MAX) { showFormError("You can add up to " + CUSTOM_MAX + " destinations."); return; }
+    const editing = admin.editing;
+    const button = $("form-save");
+    button.disabled = true;
+    storeRows([dest]).then(() => {
+      const before = admin.custom.slice();
+      const ok = commit(() => {
+        if (editing) admin.custom[admin.custom.indexOf(editing)] = dest;
+        else admin.custom.unshift(dest);
+      }, () => { admin.custom = before; });
+      if (!ok) {
+        showFormError("This browser's storage is full, so the destination wasn't saved. Use a smaller photo (or a link instead of an upload), or delete another destination.");
+        return;
+      }
+      $("dest-dialog").close();
+      renderTable();
+      const message = (editing ? "Saved " : "Added ") + dest.name + (ONLINE ? ". Everyone sees it on Explore now." : ". It's on Explore now.");
+      showNotice(message, "success");
+    }).catch((error) => showFormError("Couldn't save to the database: " + error.message))
+      .then(() => { button.disabled = false; });
   }
   function showFormError(message) {
     $("form-error").textContent = message;
@@ -939,12 +1242,16 @@
       danger: true
     }).then((yes) => {
       if (!yes) return;
-      const before = admin.custom.slice();
-      admin.custom = admin.custom.filter((item) => item !== dest);
-      if (!save()) { admin.custom = before; showNotice("Couldn't save the change. Storage may be blocked.", "error"); return; }
-      renderTable();
-      announce("Deleted " + dest.name + ".");
-      $("admin-search").focus();
+      dropRow(dest).then(() => {
+        const before = admin.custom.slice();
+        if (!commit(() => { admin.custom = admin.custom.filter((item) => item !== dest); }, () => { admin.custom = before; })) {
+          showNotice("Couldn't save the change. Storage may be blocked.", "error");
+          return;
+        }
+        renderTable();
+        announce("Deleted " + dest.name + ".");
+        $("admin-search").focus();
+      }).catch((error) => showNotice("Couldn't delete it from the database: " + error.message, "error"));
     });
   }
 
@@ -963,12 +1270,16 @@
       if (!list) { showNotice("That file isn't a destinations export. Nothing was changed.", "error"); return; }
       const taken = new Set(BUILTINS.map((dest) => dest.id).concat(admin.custom.map((dest) => dest.id)));
       const fresh = list.map((item) => cleanCustomDestination(item, taken)).filter(Boolean).slice(0, CUSTOM_MAX - admin.custom.length);
-      const before = admin.custom.slice();
-      admin.custom = admin.custom.concat(fresh);
-      if (!save()) { admin.custom = before; showNotice("Storage is full, so nothing was imported.", "error"); return; }
-      renderTable();
-      const skipped = list.length - fresh.length;
-      showNotice("Imported " + plural(fresh.length, "destination", "destinations") + (skipped ? " and skipped " + skipped + " that were invalid or already here." : "."), "success");
+      storeRows(fresh).then(() => {
+        const before = admin.custom.slice();
+        if (!commit(() => { admin.custom = admin.custom.concat(fresh); }, () => { admin.custom = before; })) {
+          showNotice("Storage is full, so nothing was imported.", "error");
+          return;
+        }
+        renderTable();
+        const skipped = list.length - fresh.length;
+        showNotice("Imported " + plural(fresh.length, "destination", "destinations") + (skipped ? " and skipped " + skipped + " that were invalid or already here." : "."), "success");
+      }).catch((error) => showNotice("Couldn't import into the database: " + error.message, "error"));
     };
     reader.readAsText(file);
   }
@@ -1016,7 +1327,29 @@
     $("export-button").addEventListener("click", exportAll);
     $("import-button").addEventListener("click", () => $("import-file").click());
     $("import-file").addEventListener("change", (event) => { importFile(event.target.files[0]); event.target.value = ""; });
-    renderTable();
+    if (!ONLINE) { renderTable(); return; }
+    /* With the database on, only admins may use this page. */
+    const gate = (text, linkLabel, href) => {
+      $("admin-panel").hidden = true;
+      $("admin-toolbar").hidden = true;
+      $("gate-text").textContent = text;
+      $("gate-link").textContent = linkLabel;
+      $("gate-link").href = href;
+      $("admin-gate").hidden = false;
+    };
+    const session = readSession();
+    if (!session) { gate("Log in with an admin account to add, edit or delete destinations.", "Log in", "./login.html?next=admin.html"); return; }
+    $("admin-panel").hidden = true;
+    $("admin-toolbar").hidden = true;
+    loadProfile(session).then((current) => {
+      if (!current.admin) { gate("Your account (" + current.user.email + ") isn't an admin. An admin can give you access in the database.", "Back to Explore", "./index.html"); return null; }
+      return fetchCloudDestinations().then((items) => {
+        admin.custom = items;
+        $("admin-panel").hidden = false;
+        $("admin-toolbar").hidden = false;
+        renderTable();
+      });
+    }).catch((error) => gate("Couldn't check your account: " + error.message, "Try again", "./admin.html"));
   }
   startAdmin();
 })();
