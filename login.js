@@ -601,6 +601,10 @@
   function initTheme() {
     applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light", false);
     cloudBoot();
+    /* the header turns into a floating glass capsule once the page scrolls */
+    const markScrolled = () => document.documentElement.classList.toggle("scrolled", window.scrollY > 8);
+    window.addEventListener("scroll", markScrolled, { passive: true });
+    markScrolled();
     const button = document.getElementById("theme-toggle");
     if (button) button.addEventListener("click", () => switchTheme(button));
     /* A page-to-page transition that gets skipped (hidden tab, quick second click) is not an error. */

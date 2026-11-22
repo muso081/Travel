@@ -562,6 +562,127 @@ h2 { font-weight: 500; }
 @media print { .account { display: none !important; } }
 
 /* ==========================================================================
+   Liquid Glass (iOS style): a soft blurred wallpaper behind everything, and
+   see-through frosted surfaces, pill buttons and a floating glass header on top.
+   ========================================================================== */
+:root {
+  --wallpaper: linear-gradient(rgba(244, 244, 251, 0.8), rgba(244, 244, 251, 0.8)), url("./backdrop.jpg") center / cover no-repeat, #f4f4fb;
+  --surface: rgba(255, 255, 255, 0.64); --surface-2: rgba(12, 12, 29, 0.05); --surface-3: rgba(12, 12, 29, 0.1);
+  --glass-edge: rgba(12, 12, 29, 0.1);
+  --glass-shine: inset 0 1px 0 rgba(255, 255, 255, 0.95), inset 0 -1px 0 rgba(12, 12, 29, 0.03);
+  --glass-drop: 0 10px 30px -12px rgba(12, 12, 29, 0.18);
+  --glass-blur: blur(22px) saturate(180%);
+  --radius: 26px; --radius-md: 16px;
+  --dialog-bg: rgba(250, 250, 255, 0.9);
+}
+:root[data-theme="dark"] {
+  --wallpaper: linear-gradient(rgba(6, 6, 24, 0.8), rgba(6, 6, 24, 0.8)), url("./backdrop.jpg") center / cover no-repeat, #07071a;
+  --surface: rgba(255, 255, 255, 0.065); --surface-2: rgba(255, 255, 255, 0.09); --surface-3: rgba(255, 255, 255, 0.15);
+  --dialog-bg: rgba(22, 22, 52, 0.9);
+}
+:root[data-theme="dark"], .site-header, .hero, .page-heading, .empty-trip {
+  --glass-edge: rgba(255, 255, 255, 0.17);
+  --glass-shine: inset 0 1px 0 rgba(255, 255, 255, 0.24), inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  --glass-drop: 0 14px 36px -14px rgba(0, 0, 0, 0.6);
+}
+.site-header, .hero, .page-heading, .empty-trip { --surface: rgba(255, 255, 255, 0.08); --surface-2: rgba(255, 255, 255, 0.12); --surface-3: rgba(255, 255, 255, 0.18); }
+
+/* the wallpaper: fixed, so frosted things always have colour behind them */
+body { background: var(--bg); }
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--wallpaper); }
+
+/* top bands show the hero photo too, under a dark wash */
+:root { --band: linear-gradient(180deg, rgba(7, 7, 28, 0.78), rgba(7, 7, 28, 0.86)), url("./hero.jpg") center 58% / cover no-repeat, #0b0b22; }
+
+/* frosted surfaces */
+.panel, .trip-strip, .dest-card, .ticket-main, .ticket-stub, .price-box, .plan-card, .plan-book, .plan-done, .seg,
+.login-card, .time-length, .hero-empty {
+  border-color: var(--glass-edge);
+  box-shadow: var(--glass-shine), var(--glass-drop);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+}
+.ticket { filter: none; }
+
+/* pill buttons */
+.button, .header-cta, .account-login { border-radius: 999px; }
+.button { transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.3, 1.4, 0.5, 1), box-shadow 0.2s ease; }
+.button:active:not(:disabled), .icon-button:active:not(:disabled), .theme-toggle:active, .choice:active { transform: scale(0.96); }
+.button-primary {
+  background-color: var(--btn-bg);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0) 52%);
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -2px 8px rgba(0, 0, 0, 0.18), 0 10px 26px -10px rgba(64, 64, 242, 0.8);
+}
+.button-primary:hover { background-color: var(--btn-bg-hover); }
+.button-secondary, .button-ghost, .button-danger, .theme-toggle, .choice, .account-button, .account-login, .detail-close {
+  background-color: var(--surface);
+  border-color: var(--glass-edge);
+  box-shadow: var(--glass-shine), 0 6px 18px -10px rgba(12, 12, 29, 0.35);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+}
+.button-danger { border-color: color-mix(in srgb, var(--danger) 55%, transparent); }
+.button-secondary:hover, .button-ghost:hover, .theme-toggle:hover, .choice:hover, .account-button:hover, .account-login:hover { background-color: var(--surface-3); }
+.theme-toggle, .icon-button { border-radius: 50%; }
+.icon-button:hover:not(:disabled) { border-color: var(--glass-edge); box-shadow: var(--glass-shine); }
+.choice { border-radius: 999px; }
+.choice:has(input:checked) { background-color: var(--teal-soft); border-color: var(--teal); box-shadow: var(--glass-shine), 0 0 0 1px var(--teal); }
+
+/* fields: frosted wells */
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+  background-color: var(--surface); border-radius: 14px;
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: inset 0 1px 2px rgba(12, 12, 29, 0.06);
+}
+:root[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]), :root[data-theme="dark"] select, :root[data-theme="dark"] textarea { background-color: var(--surface-2); }
+.hero-search input[type="search"] { background: transparent !important; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+/* floating glass header */
+.site-header { background: transparent; border-bottom: 0; padding-top: 10px; -webkit-backdrop-filter: none; backdrop-filter: none; transition: background-color 0.3s ease; }
+:root:not(.scrolled) .site-header { background: #0b0b22; }
+.header-inner {
+  width: min(calc(var(--page) + 32px), calc(100% - 20px)); min-height: 64px; margin-bottom: 10px; padding: 0 10px 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 999px;
+  background: rgba(14, 14, 40, 0.68);
+  -webkit-backdrop-filter: blur(26px) saturate(190%); backdrop-filter: blur(26px) saturate(190%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 16px 40px -16px rgba(0, 0, 0, 0.55);
+}
+.primary-nav a[aria-current="page"]::after { background: rgba(255, 255, 255, 0.16); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25); }
+.header-cta { box-shadow: inset 0 1px 0 #ffffff, 0 6px 16px -8px rgba(0, 0, 0, 0.6); }
+@media (max-width: 720px) {
+  .header-inner { border-radius: 26px; padding: 6px 8px 6px 12px; }
+}
+
+/* dialogs and menus: thick glass */
+.dialog, .account-panel {
+  background: var(--dialog-bg); border-color: var(--glass-edge);
+  -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+}
+.dialog { border-radius: 28px; box-shadow: var(--glass-shine), 0 40px 90px -20px rgba(2, 6, 23, 0.6); }
+.dialog::backdrop { background: rgba(6, 6, 24, 0.42); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.account-panel { border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 22px; background: rgba(255, 255, 255, 0.9); }
+
+/* the curve under the Explore hero shows the same wallpaper */
+.hero::after { background: var(--wallpaper); background-attachment: fixed; }
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --surface: #ffffff; --surface-2: #f0f0f8; --surface-3: #e4e4f0; }
+  :root[data-theme="dark"] { --surface: #0f0f2a; --surface-2: #16163a; --surface-3: #1f1f4c; }
+  .header-inner { background: #0e0e28; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root { --surface: #ffffff; --surface-2: #f0f0f8; --surface-3: #e4e4f0; --dialog-bg: #ffffff; }
+  :root[data-theme="dark"] { --surface: #0f0f2a; --surface-2: #16163a; --surface-3: #1f1f4c; --dialog-bg: #16163a; }
+  .site-header, .hero, .page-heading, .empty-trip { --surface: #15153a; --surface-2: #1d1d4a; --surface-3: #27275c; }
+  .header-inner { background: #0e0e28; }
+}
+@media (forced-colors: active) { body::before { display: none; } }
+@media print { body::before { display: none; } }
+/* glass needs slightly brighter control edges in dark mode */
+:root[data-theme="dark"] { --line-strong: #8789bc; }
+.site-header, .hero, .page-heading, .empty-trip { --line-strong: #8a8cc0; }
+:root[data-theme="dark"] input[type="checkbox"]:checked, :root[data-theme="dark"] input[type="radio"]:checked { border-color: var(--teal-ink); }
+
+/* ==========================================================================
    Itinerary
    ========================================================================== */
 
