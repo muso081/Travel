@@ -958,3 +958,21 @@ h2 { font-weight: 500; }
 .photo-frame.no-photo { background: radial-gradient(80% 90% at 85% 0%, rgba(64, 64, 242, 0.55), transparent 60%), radial-gradient(70% 80% at 0% 100%, rgba(168, 85, 247, 0.35), transparent 60%), #12123a; }
 .photo-frame.no-photo::before { content: attr(data-initials); position: absolute; inset: 0 0 22% 0; display: grid; place-items: center; color: rgba(255, 255, 255, 0.28); font-family: var(--serif); font-size: clamp(3rem, 2rem + 4vw, 5rem); letter-spacing: 0.04em; }
 @keyframes frame-shimmer { to { background-position: -150% 0; } }
+
+/* empty-trip note on the hero photo: a slim glass bar instead of a heavy dashed box */
+.hero .hero-empty {
+  grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "art title action" "art text action";
+  align-items: center; column-gap: 20px; row-gap: 2px; padding: 16px 16px 16px 22px; text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 22px; background: rgba(8, 8, 30, 0.5);
+  -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.7);
+}
+.hero .hero-empty-art { grid-area: art; width: 84px; color: rgba(255, 255, 255, 0.55); }
+.hero .hero-empty h2 { grid-area: title; font-size: 1.0625rem; font-weight: 700; }
+.hero .hero-empty p { grid-area: text; margin: 0; max-width: none; color: #dcdcf5; font-size: 0.9375rem; line-height: 1.45; }
+.hero .hero-empty .button { grid-area: action; margin: 0; white-space: nowrap; border-radius: 999px; }
+@media (max-width: 640px) {
+  .hero .hero-empty { grid-template-columns: minmax(0, 1fr); grid-template-areas: "title" "text" "action"; row-gap: 6px; padding: 18px; }
+  .hero .hero-empty-art { display: none; }
+  .hero .hero-empty .button { justify-self: start; margin-top: 8px; }
+}
