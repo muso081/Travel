@@ -734,6 +734,50 @@ input:not([type="checkbox"]):not([type="radio"]), select, textarea {
   .footer-links { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media print { .site-footer { display: none; } }
+
+/* ---------- dropdowns: glass list instead of the browser's plain one ----------
+   Uses the browser's customizable <select> (Chrome and Edge 135+). It is still a real
+   <select>, so keyboard, screen readers and phone pickers keep working; browsers without
+   support show their own list. */
+@supports (appearance: base-select) {
+  select, ::picker(select) { appearance: base-select; }
+  select { display: flex; align-items: center; gap: 10px; min-width: 0; max-width: 100%; padding-inline: 14px 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
+  ::picker(select) { max-width: min(420px, calc(100vw - 24px)); }
+  select option { white-space: normal; overflow-wrap: anywhere; }
+  select:hover:not(:disabled) { border-color: var(--teal); }
+  select::picker-icon {
+    content: ""; flex: none; width: 18px; height: 18px; margin-left: auto; background: var(--muted);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 8l5 5 5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 8l5 5 5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+    transition: rotate 0.2s ease;
+  }
+  select:open::picker-icon { rotate: 180deg; background: var(--teal); }
+  select:open { border-color: var(--teal); }
+  ::picker(select) {
+    margin-block: 8px; padding: 6px; max-height: min(360px, 60vh); overflow-y: auto;
+    border: 1px solid var(--glass-edge); border-radius: 18px;
+    background: var(--dialog-bg); color: var(--ink);
+    -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+    box-shadow: var(--glass-shine), 0 24px 60px -18px rgba(2, 6, 23, 0.55);
+    opacity: 1; translate: 0 0;
+    transition: opacity 0.16s ease, translate 0.16s ease, overlay 0.16s allow-discrete, display 0.16s allow-discrete;
+  }
+  @starting-style { select:open::picker(select) { opacity: 0; translate: 0 -6px; } }
+  select option {
+    display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 12px; border-radius: 12px;
+    color: var(--ink); font-weight: 550; cursor: pointer;
+  }
+  select option:hover, select option:focus-visible { background: var(--surface-3); outline: none; }
+  select option:checked { background: var(--teal-soft); color: var(--teal-ink); font-weight: 700; }
+  select option::checkmark {
+    order: 1; margin-left: auto; content: ""; width: 16px; height: 16px; background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 10.5l3.5 3.5 7.5-8'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 10.5l3.5 3.5 7.5-8'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  select option:disabled { color: var(--muted); cursor: default; }
+  select optgroup { padding: 4px 0; }
+  select optgroup legend { padding: 6px 12px 2px; color: var(--muted); font-size: 0.75rem; font-weight: 750; letter-spacing: 0.06em; text-transform: uppercase; }
+}
 /* ---------- photo frames: shimmer while loading, initials if no photo ---------- */
 .photo-frame { position: relative; overflow: hidden; background: linear-gradient(110deg, #17173a 30%, #26265a 50%, #17173a 70%) 0 0 / 300% 100% #17173a; animation: frame-shimmer 1.5s linear infinite; }
 .photo-frame.has-photo, .photo-frame.no-photo { animation: none; }
