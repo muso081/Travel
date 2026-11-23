@@ -885,6 +885,41 @@ input:not([type="checkbox"]):not([type="radio"]), select, textarea {
 @media (prefers-reduced-transparency: reduce) { :root .glint:not(.button-primary):not(.hero-search) { background-image: none !important; } }
 
 /* ==========================================================================
+   Wayfinding type. One family, Overpass: an open-source interpretation of the
+   lettering on North American highway signs. Weight and size do the work, so
+   no labels in capitals and no second display face.
+   ========================================================================== */
+@font-face {
+  font-family: "Overpass"; src: url("./fonts/overpass.woff") format("woff");
+  font-weight: 100 900; font-style: normal; font-display: swap;
+  ascent-override: 96%; descent-override: 26%; line-gap-override: 0%;   /* centres capitals inside pills and buttons */
+}
+:root {
+  --font: "Overpass", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --serif: var(--font);
+  /* classic 16px scale: 14 16 18 21 24 36 48 60 72 */
+  --t-sm: 0.875rem; --t-base: 1rem; --t-md: 1.125rem; --t-lg: 1.3125rem; --t-xl: 1.5rem;
+  --t-2xl: 2.25rem; --t-3xl: 3rem; --t-4xl: 3.75rem; --t-5xl: 4.5rem;
+}
+body { font-family: var(--font); line-height: 1.55; font-kerning: normal; }
+h1, h2, h3 { font-family: var(--font); }
+h1 { font-weight: 800; letter-spacing: -0.035em; }
+h2 { font-weight: 750; letter-spacing: -0.025em; }
+h3 { font-weight: 700; letter-spacing: -0.015em; }
+.page-heading h1 { font-size: clamp(2.6rem, 1.5rem + 3.8vw, var(--t-5xl)); line-height: 0.98; }
+.page-heading .lede { font-size: var(--t-md); max-width: 54ch; }
+.button, .choice, .primary-nav a, .header-cta, label { letter-spacing: -0.005em; }
+
+/* footer and dropdown group labels: sentence case */
+.footer-links h2 { font-size: var(--t-base); font-weight: 750; letter-spacing: -0.01em; text-transform: none; }
+@supports (appearance: base-select) { select optgroup legend { font-size: var(--t-sm); letter-spacing: 0; text-transform: none; } }
+
+/* the header button, without the arrow badge */
+.header-cta { padding: 4px 22px; }
+/* heavy display words can be wider than a phone at large text sizes: hyphenate only when a word cannot fit */
+h1, h2, h3 { overflow-wrap: anywhere; hyphens: auto; }
+
+/* ==========================================================================
    Packing
    ========================================================================== */
 

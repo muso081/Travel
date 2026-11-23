@@ -8,7 +8,8 @@
     <meta name="description" content="Browse destinations with sample daily costs, then create the trip your itinerary, budget and packing list will share.">
     <title>Explore destinations · TravelTogether</title>
     <link rel="icon" type="image/svg+xml" href="./logo.svg">
-    <link rel="stylesheet" href="./destinations.css?v=dab8c19eb5">
+    <link rel="preload" href="./fonts/overpass.woff" as="font" type="font/woff" crossorigin>
+    <link rel="stylesheet" href="./destinations.css?v=69a29a1c95">
     <script>(function () {
   var theme = null;
   try { theme = window.localStorage.getItem("tp:theme"); } catch (error) {}
@@ -37,7 +38,7 @@
           <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z"/></svg>
           <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>
         </button>
-        <a class="header-cta" href="./index.html#trip-form">Plan a trip<span class="header-cta-arrow"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10h12M11 5l5 5-5 5"/></svg></span></a>
+        <a class="header-cta" href="./index.html#trip-form">Plan a trip</a>
       </div>
     </header>
     <main id="main" class="page-shell" tabindex="-1">
@@ -52,17 +53,22 @@
 
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="hero-eyebrow">18 destinations · 6 regions · one shared plan</p>
-          <h1 id="hero-title">Plan the trip <em>together.</em></h1>
-          <p class="lede">Pick a place, set the dates, then keep your itinerary, budget and packing list in one shared plan. It all stays in this browser, so there is nothing to sign up for.</p>
+          <h1 id="hero-title">Where are we going?</h1>
+          <p class="lede">Pick a place and set the dates. Your group gets one plan: what you do each day, what it costs, and what to pack.</p>
           <form class="hero-search" id="hero-search" role="search" aria-label="Find a destination">
             <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="9" cy="9" r="5.5"/><path d="M13.2 13.2 17 17"/></svg>
-            <input id="hero-q" type="search" aria-label="Where do you want to go?" placeholder="Where to? Try “beach”, “Japan” or “food”" autocomplete="off">
+            <input id="hero-q" type="search" aria-label="Search places, countries or activities" placeholder="City, country or activity" autocomplete="off">
             <button class="button button-primary" type="submit">Find</button>
           </form>
-          <div class="hero-actions">
-            <a class="button button-primary" href="#destinations" data-jump>Browse destinations<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10h12M11 5l5 5-5 5"/></svg></a>
-            <a class="button button-secondary" href="#trip-form" data-jump>Create a trip</a>
+          <div class="hero-picks" id="hero-picks">
+            <p id="picks-label">Popular</p>
+            <ul aria-labelledby="picks-label">
+              <li><button class="hero-pick" type="button" data-pick="tokyo">Tokyo</button></li>
+              <li><button class="hero-pick" type="button" data-pick="lisbon">Lisbon</button></li>
+              <li><button class="hero-pick" type="button" data-pick="bali">Bali</button></li>
+              <li><button class="hero-pick" type="button" data-pick="santorini">Santorini</button></li>
+              <li><button class="hero-pick" type="button" data-pick="cape-town">Cape Town</button></li>
+            </ul>
           </div>
         </div>
         <div id="active-trip"></div>
@@ -70,7 +76,7 @@
 
       <section class="section" id="destinations" aria-labelledby="destinations-title">
         <div class="section-head">
-          <h2 id="destinations-title" tabindex="-1">Where to?</h2>
+          <h2 id="destinations-title" tabindex="-1">All destinations</h2>
           <p class="lede" id="dest-lede">Places to start from. Sample daily costs are rounded, illustrative figures in each place's own currency, not live prices.</p>
         </div>
 
@@ -297,7 +303,7 @@
       <div class="footer-top">
         <div class="footer-brand">
           <a class="brand" href="./index.html"><span class="brand-mark"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 3 3 10.6l7 2.6L12.8 21 21 3z"/><path d="M10 13.2 21 3"/></svg></span><span>TravelTogether</span></a>
-          <p>Made for the miles between here and there. One shared plan for the itinerary, the budget and the packing list.</p>
+          <p>Plan a group trip in one place: where you are going, what you do each day, what it costs and what to pack.</p>
           <p class="footer-save"><span aria-hidden="true"></span>Logged in, your plans sync to your account. Otherwise they stay in this browser.</p>
         </div>
         <nav class="footer-links" aria-label="Footer">
@@ -329,10 +335,10 @@
         </nav>
       </div>
       <div class="footer-bottom">
-        <p>© 2026 TravelTogether · A Web Programming team project at Gachon University</p>
-        <p class="footer-legal"><a href="./privacy.html">Privacy</a><a href="./terms.html">Terms</a><a href="#main">Back to top ↑</a></p>
+        <p>© 2026 TravelTogether. A Web Programming team project at Gachon University.</p>
+        <p class="footer-legal"><a href="./privacy.html">Privacy</a><a href="./terms.html">Terms</a><a href="#main">Back to top</a></p>
       </div>
     </footer>
-    <script src="./destinations.js?v=83ad51fd1a"></script>
+    <script src="./destinations.js?v=4c78114637"></script>
   </body>
 </html>

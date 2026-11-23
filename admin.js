@@ -678,7 +678,7 @@
   /* Liquid Glass highlight: a soft light follows the mouse across glass surfaces */
   function initGlint() {
     if (!window.matchMedia || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
-    const GLASS = ".button, .choice, .theme-toggle, .account-button, .account-login, .header-inner, .dest-card, .panel, .trip-strip, .plan-card, .hero-empty, .site-footer, .legal-points li, .legal-services div";
+    const GLASS = ".button, .choice, .theme-toggle, .account-button, .account-login, .header-inner, .header-cta, .hero-pick";
     let lit = null;
     let frame = 0;
     let last = null;

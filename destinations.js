@@ -678,7 +678,7 @@
   /* Liquid Glass highlight: a soft light follows the mouse across glass surfaces */
   function initGlint() {
     if (!window.matchMedia || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
-    const GLASS = ".button, .choice, .theme-toggle, .account-button, .account-login, .header-inner, .dest-card, .panel, .trip-strip, .plan-card, .hero-empty, .site-footer, .legal-points li, .legal-services div";
+    const GLASS = ".button, .choice, .theme-toggle, .account-button, .account-login, .header-inner, .header-cta, .hero-pick";
     let lit = null;
     let frame = 0;
     let last = null;
@@ -1406,7 +1406,7 @@
       const amount = el("p", "dest-cost-amount");
       amount.append(el("strong", "tnum", "About " + money(dailyTotal(dest), dest.currency)), el("span", "muted", " per person, a day"));
       const level = el("p", "dest-cost-level");
-      level.append(pips(dest.costLevel), el("span", "", COST_LEVELS[dest.costLevel] + " · sample figure"));
+      level.append(pips(dest.costLevel), el("span", "", COST_LEVELS[dest.costLevel] + " (sample figure)"));
       cost.append(amount, level);
 
       const actions = el("div", "dest-actions");
@@ -2338,6 +2338,19 @@
       applyFilters();
     });
     $("surprise").addEventListener("click", surprise);
+    /* one-tap picks under the hero search open that destination's details */
+    const picks = $("hero-picks");
+    if (picks) {
+      picks.querySelectorAll("[data-pick]").forEach((button) => {
+        const dest = DESTINATIONS.find((item) => item.id === button.dataset.pick);
+        if (dest) button.textContent = dest.name; else button.closest("li").hidden = true;
+      });
+      picks.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-pick]");
+        const dest = button && DESTINATIONS.find((item) => item.id === button.dataset.pick);
+        if (dest) openDetail(dest);
+      });
+    }
     $("hero-search").addEventListener("submit", (event) => {
       event.preventDefault();
       const search = $("search");
