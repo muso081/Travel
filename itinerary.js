@@ -675,6 +675,33 @@
     });
   }
 
+  /* Liquid Glass highlight: a soft light follows the mouse across glass surfaces */
+  function initGlint() {
+    if (!window.matchMedia || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    const GLASS = ".button, .choice, .theme-toggle, .account-button, .account-login, .header-inner, .dest-card, .panel, .trip-strip, .plan-card, .hero-empty, .site-footer, .legal-points li, .legal-services div";
+    let lit = null;
+    let frame = 0;
+    let last = null;
+    const dim = () => { if (lit) { lit.classList.remove("glint"); lit = null; } };
+    const paint = () => {
+      frame = 0;
+      const event = last;
+      const target = event.target instanceof Element ? event.target.closest(GLASS) : null;
+      if (target !== lit) { dim(); if (target) { lit = target; lit.classList.add("glint"); } }
+      if (!lit) return;
+      const box = lit.getBoundingClientRect();
+      lit.style.setProperty("--gx", Math.round(event.clientX - box.left) + "px");
+      lit.style.setProperty("--gy", Math.round(event.clientY - box.top) + "px");
+    };
+    document.addEventListener("pointermove", (event) => {
+      if (event.pointerType !== "mouse") return;
+      last = event;
+      if (!frame) frame = window.requestAnimationFrame(paint);
+    }, { passive: true });
+    document.addEventListener("pointerleave", dim);
+    window.addEventListener("blur", dim);
+  }
+
   function initTheme() {
     applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light", false);
     cloudBoot();
@@ -690,6 +717,7 @@
       if ("ResizeObserver" in window) new ResizeObserver(measure).observe(header);
     }
     initNavLens();
+    initGlint();
     const button = document.getElementById("theme-toggle");
     if (button) button.addEventListener("click", () => switchTheme(button));
     /* A page-to-page transition that gets skipped (hidden tab, quick second click) is not an error. */

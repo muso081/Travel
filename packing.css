@@ -808,6 +808,83 @@ input:not([type="checkbox"]):not([type="radio"]), select, textarea {
 @media (forced-colors: active) { .nav-lens { outline: 2px solid Highlight; } }
 
 /* ==========================================================================
+   Light theme: the photo bands and the header turn light as well (bright, airy
+   glass), instead of staying dark in both themes.
+   ========================================================================== */
+:root:not([data-theme="dark"]) {
+  --muted: #4f5168;   /* a touch darker so it stays readable over the brightest part of the wallpaper */
+  --band:
+    linear-gradient(180deg, rgba(246, 246, 251, 0.62) 0%, rgba(246, 246, 251, 0.68) 70%, rgba(246, 246, 251, 0.86) 100%),
+    url("./hero.jpg") center 58% / cover no-repeat, #eceef8;
+}
+:root:not([data-theme="dark"]) :is(.site-header, .hero, .page-heading, .empty-trip) {
+  color-scheme: light;
+  --surface: rgba(255, 255, 255, 0.56); --surface-2: rgba(12, 12, 29, 0.06); --surface-3: rgba(12, 12, 29, 0.11);
+  --ink: #0c0c1d; --ink-2: #222339; --muted: #2e3047;
+  --line: rgba(12, 12, 29, 0.12); --line-strong: #64668a;
+  --teal: #4040f2; --teal-ink: #2f2fc4; --teal-soft: rgba(64, 64, 242, 0.13);
+  --btn-bg: #4040f2; --btn-bg-hover: #3030d8; --btn-fg: #ffffff;
+  --violet: #6d28d9; --violet-soft: #ede9fe; --amber: #92400e; --amber-soft: #fef3c7;
+  --danger: #be123c; --danger-soft: #ffe4e6; --ok: #047857; --ok-soft: #d1fae5;
+  --info: #0369a1; --info-soft: #e0f2fe; --focus: #4040f2;
+  --glass-edge: rgba(12, 12, 29, 0.1);
+  --glass-shine: inset 0 1px 1px rgba(255, 255, 255, 0.95), inset 0 -1px 1px rgba(255, 255, 255, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.4), inset 0 18px 30px -24px rgba(255, 255, 255, 0.8);
+  --glass-drop: 0 14px 34px -14px rgba(12, 12, 29, 0.24);
+}
+:root:not([data-theme="dark"]) .empty-trip p { color: var(--ink-2); }
+:root:not([data-theme="dark"]) .page-heading .button-secondary { background-color: var(--surface); border-color: var(--glass-edge); }
+:root:not([data-theme="dark"]) .page-heading .button-secondary:hover { background-color: rgba(255, 255, 255, 0.8); }
+
+/* the header capsule: white glass */
+:root:not([data-theme="dark"]) .header-inner {
+  background: rgba(255, 255, 255, 0.6); border-color: rgba(255, 255, 255, 0.85);
+  box-shadow: inset 0 1px 1px #ffffff, inset 0 0 0 1px rgba(255, 255, 255, 0.4), 0 16px 40px -18px rgba(12, 12, 29, 0.35), 0 1px 3px rgba(12, 12, 29, 0.06);
+}
+:root:not([data-theme="dark"]).scrolled .header-inner { background: rgba(255, 255, 255, 0.76); }
+:root:not([data-theme="dark"]) .brand { color: var(--ink); }
+:root:not([data-theme="dark"]) .site-header .brand-mark { background: #4040f2; }
+:root:not([data-theme="dark"]) .site-header .brand-mark svg { fill: #ffffff; stroke: #ffffff; }
+:root:not([data-theme="dark"]) .site-header .brand-mark svg path + path { stroke: #4040f2; }
+:root:not([data-theme="dark"]) .primary-nav a:hover { color: var(--ink); background: rgba(12, 12, 29, 0.05); }
+:root:not([data-theme="dark"]) .primary-nav a[aria-current="page"],
+:root:not([data-theme="dark"]) .primary-nav a.is-target { color: var(--ink); }
+:root:not([data-theme="dark"]) .primary-nav.lens-moving a[aria-current="page"] { color: var(--ink-2); }
+:root:not([data-theme="dark"]) .primary-nav a[aria-current="page"]::after,
+:root:not([data-theme="dark"]) .nav-lens {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 1px 0 #ffffff, 0 0 0 1px rgba(12, 12, 29, 0.05), 0 4px 14px -4px rgba(12, 12, 29, 0.22);
+}
+:root:not([data-theme="dark"]) .theme-toggle { color: var(--ink); border-color: rgba(12, 12, 29, 0.14); }
+:root:not([data-theme="dark"]) .theme-toggle:hover { color: var(--ink); background-color: rgba(255, 255, 255, 0.85); }
+:root:not([data-theme="dark"]) .account-login, :root:not([data-theme="dark"]) .account-button { color: var(--ink); border-color: rgba(12, 12, 29, 0.14); }
+:root:not([data-theme="dark"]) .account-login:hover, :root:not([data-theme="dark"]) .account-button:hover { background-color: rgba(255, 255, 255, 0.85); }
+:root:not([data-theme="dark"]) .header-cta { background: #0c0c1d; color: #ffffff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 8px 18px -8px rgba(12, 12, 29, 0.6); }
+:root:not([data-theme="dark"]) .header-cta:hover { background: #26273d; }
+:root:not([data-theme="dark"]) .header-cta-arrow { background: #ffffff; }
+:root:not([data-theme="dark"]) .header-cta svg { stroke: #0c0c1d; }
+:root:not([data-theme="dark"]) .site-header :focus-visible { outline-color: #4040f2; }
+:root:not([data-theme="dark"]) .header-inner::after { background-image: linear-gradient(90deg, transparent, #8f8fff 45%, #4040f2 50%, #8f8fff 55%, transparent); }
+
+/* ==========================================================================
+   Deeper Liquid Glass: light catches every glass edge, a soft inner glow sits
+   under the top edge, and a highlight follows the cursor across glass.
+   ========================================================================== */
+:root {
+  --surface: rgba(255, 255, 255, 0.56);
+  --glass-blur: blur(24px) saturate(200%);
+  --glass-shine: inset 0 1px 1px rgba(255, 255, 255, 0.95), inset 0 -1px 1px rgba(255, 255, 255, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.4), inset 0 18px 30px -24px rgba(255, 255, 255, 0.8);
+}
+:root[data-theme="dark"], :root[data-theme="dark"] :is(.site-header, .hero, .page-heading, .empty-trip) {
+  --glass-shine: inset 0 1px 1px rgba(255, 255, 255, 0.3), inset 0 -1px 1px rgba(255, 255, 255, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 18px 30px -24px rgba(255, 255, 255, 0.18);
+}
+/* the cursor highlight (set by script on mouse devices only) */
+.glint { --glint-layer: radial-gradient(240px circle at var(--gx, 50%) var(--gy, 50%), rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.06) 40%, transparent 70%); }
+:root[data-theme="dark"] .glint { --glint-layer: radial-gradient(240px circle at var(--gx, 50%) var(--gy, 50%), rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.03) 40%, transparent 70%); }
+:root .glint:not(.button-primary):not(.hero-search) { background-image: var(--glint-layer) !important; }
+:root .button-primary.glint { background-image: var(--glint-layer), linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0) 52%) !important; }
+@media (prefers-reduced-transparency: reduce) { :root .glint:not(.button-primary):not(.hero-search) { background-image: none !important; } }
+
+/* ==========================================================================
    Packing
    ========================================================================== */
 
