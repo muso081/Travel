@@ -135,13 +135,13 @@
   }
   function formatDate(key, options) {
     const date = parseDate(key);
-    return date ? new Intl.DateTimeFormat(undefined, options).format(date) : String(key || "");
+    return date ? new Intl.DateTimeFormat(APP_LOCALE, options).format(date) : String(key || "");
   }
   function formatRange(startKey, endKey) {
     const start = parseDate(startKey);
     const end = parseDate(endKey);
     if (!start || !end) return "";
-    const formatter = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" });
+    const formatter = new Intl.DateTimeFormat(APP_LOCALE, { month: "short", day: "numeric", year: "numeric" });
     return typeof formatter.formatRange === "function" ? formatter.formatRange(start, end) : formatter.format(start) + " to " + formatter.format(end);
   }
 
@@ -722,6 +722,7 @@
     }
     initNavLens();
     initGlint();
+    initLanguageMenu();
     const button = document.getElementById("theme-toggle");
     if (button) button.addEventListener("click", () => switchTheme(button));
     /* A page-to-page transition that gets skipped (hidden tab, quick second click) is not an error. */
@@ -745,6 +746,240 @@
     window.addEventListener("storage", (event) => {
       if (event.key !== TRIP_KEY && event.key !== null) return;
       showNotice("The active trip was changed in another tab.", "warning", { label: "Reload this page", onClick: () => window.location.reload() });
+    });
+  }
+
+  /* ======================================================================
+     Languages. The page is written in English; for Russian, Korean or Uzbek
+     the head script loads that language's dictionary (i18n/<lang>.js) and
+     this translator swaps the text as it appears, including everything the
+     page scripts add later (dialogs, messages, lists). Strings with numbers
+     or names in them are matched by patterns. Dates, numbers and money use
+     the chosen language's formats through APP_LOCALE.
+     ====================================================================== */
+  const LANGS = [
+    { code: "en", name: "English", short: "EN", locale: undefined },
+    { code: "ru", name: "Русский", short: "RU", locale: "ru" },
+    { code: "ko", name: "한국어", short: "KO", locale: "ko" },
+    { code: "uz", name: "O‘zbekcha", short: "UZ", locale: "uz-Latn" }
+  ];
+  const LANG = (() => {
+    const code = document.documentElement.getAttribute("data-lang");
+    return LANGS.find((item) => item.code === code) || LANGS[0];
+  })();
+  /* every Intl formatter on the site uses this (undefined = the browser's own, for English) */
+  const APP_LOCALE = LANG.locale;
+
+  const I18N = (() => {
+    const probe = Boolean(window.__i18nProbe);
+    const misses = Boolean(window.__i18nMiss);   /* test runs only: report text left in English */
+    const active = LANG.code !== "en" || probe;
+    const INLINE = new Set(["A", "STRONG", "EM", "B", "I", "BR", "CODE", "ABBR", "SMALL", "KBD", "TIME", "SUP", "SUB"]);
+    const SKIP = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "svg", "SVG"]);
+    const ATTRS = ["placeholder", "aria-label", "title", "alt", "aria-roledescription", "data-tip"];
+    const norm = (text) => String(text).replace(/\s+/g, " ").trim();
+    let dict = null;
+    let patterns = [];
+    let plural = null;
+    const seen = new Set();
+    let unsent = [];
+
+    /* ---- what the translator does with a string ---- */
+    function fill(template, match) {
+      return template.replace(/\{(\d)(?::([^}]*))?\}/g, (all, index, forms) => {
+        const part = match[Number(index)] || "";
+        if (forms === undefined) { const t = dict && part ? translate(norm(part)) : undefined; return t === undefined ? part : t; }
+        const choices = forms.split("|");
+        const number = Number(part.replace(/[^\d.]/g, "")) || 0;
+        const kind = plural ? plural.select(number) : "other";
+        const pick = { one: 0, few: 1, many: 2, other: 1 }[kind];
+        return choices[Math.min(pick === undefined ? choices.length - 1 : pick, choices.length - 1)];
+      });
+    }
+    function whole(key) {
+      let out = dict.t[key];
+      if (out !== undefined) return out;
+      for (const [re, template] of patterns) {
+        const match = key.match(re);
+        /* a capture never runs across a sentence break the pattern itself doesn't contain */
+        if (match && !match.slice(1).some((part) => part && /[.!?]\s+[A-Z0-9\u201c"(]/.test(part))) return fill(template, match);
+      }
+      return undefined;
+    }
+    /* composites: "2 days · 5 activities", "Added X. Remaining: Y.", "Beaches, Food" */
+    function pieces(key) {
+      const tryJoin = (parts, glue) => {
+        let changed = false;
+        const out = parts.map((part) => { const t = translate(part); if (t !== undefined) { changed = true; return t; } return part; });
+        return changed ? out.join(glue) : undefined;
+      };
+      if (key.includes(" · ")) return tryJoin(key.split(" · "), " · ");
+      const sentences = key.split(/(?<=[.!?])\s+(?=[A-Z0-9\u201c"(])/);
+      if (sentences.length > 1) return tryJoin(sentences, " ");
+      const list = key.split(", ");
+      if (list.length > 1) {
+        const out = list.map((part) => translate(part));
+        if (out.every((part) => part !== undefined)) return out.join(", ");
+      }
+      return undefined;
+    }
+    function translate(key) {
+      const out = whole(key);
+      return out !== undefined ? out : pieces(key);
+    }
+    function text(raw) {
+      if (!dict) return raw;
+      const key = norm(raw);
+      if (!key) return raw;
+      const out = translate(key);
+      if (out === undefined) {
+        if (misses && /[A-Za-z]{3,}/.test(key) && !/[\u0400-\u04ff\uac00-\ud7af]/.test(key)) report(key);
+        return raw;
+      }
+      const lead = /^\s/.test(raw) ? " " : "";
+      const tail = /\s$/.test(raw) ? " " : "";
+      return lead + out + tail;
+    }
+    function report(key) {
+      if (seen.has(key)) return;
+      seen.add(key);
+      unsent.push([key, window.location.pathname.split("/").pop() || "index.html"]);
+    }
+    function note(key) {
+      if (!probe || !key || seen.has(key) || !/[A-Za-z]{2}/.test(key)) return;
+      seen.add(key);
+      unsent.push([key, window.location.pathname.split("/").pop() || "index.html"]);
+    }
+
+    /* ---- walking the page ---- */
+    function richKey(element) {
+      let hasText = false;
+      for (const child of element.childNodes) {
+        if (child.nodeType === 3) { if (child.nodeValue.trim()) hasText = true; }
+        else if (child.nodeType === 1) { if (!INLINE.has(child.tagName) || child.hasAttribute("id")) return null; }
+      }
+      if (!hasText || !element.firstElementChild) return null;
+      return norm(element.innerHTML);
+    }
+    function doText(node) {
+      const value = node.nodeValue;
+      if (!value.trim()) return;
+      if (probe) { note(norm(value)); return; }
+      const out = text(value);
+      if (out !== value) node.nodeValue = out;
+    }
+    function doAttrs(element) {
+      for (const name of ATTRS) {
+        const value = element.getAttribute(name);
+        if (!value || !value.trim()) continue;
+        if (probe) { note(norm(value)); continue; }
+        const out = text(value);
+        if (out !== value) element.setAttribute(name, out);
+      }
+      if (element.tagName === "INPUT" && (element.type === "submit" || element.type === "button") && element.value) {
+        if (probe) note(norm(element.value)); else element.value = text(element.value);
+      }
+    }
+    function walk(root) {
+      if (root.nodeType === 3) { doText(root); return; }
+      if (root.nodeType !== 1 || SKIP.has(root.tagName) || root.closest("[translate=no],[data-no-i18n]")) return;
+      doAttrs(root);
+      /* an element can name its own dictionary key when the same English needs different wording here */
+      const own = root.getAttribute("data-i18n");
+      if (own) {
+        if (probe) note(own);
+        else if (dict && dict.t[own] !== undefined) { if (root.textContent !== dict.t[own]) root.textContent = dict.t[own]; return; }
+      }
+      const key = richKey(root);
+      if (key) {
+        if (probe) { note(key); }
+        else if (dict && dict.h[key] !== undefined) { root.innerHTML = dict.h[key]; return; }
+      }
+      for (const child of Array.from(root.childNodes)) {
+        if (child.nodeType === 3) doText(child);
+        else if (child.nodeType === 1) walk(child);
+      }
+    }
+    function doTitle() {
+      if (probe) { note(norm(document.title)); return; }
+      const out = text(document.title);
+      if (out !== document.title) document.title = out;
+    }
+
+    function start() {
+      walk(document.body);
+      doTitle();
+      document.documentElement.classList.add("i18n-ready");
+      new MutationObserver((records) => {
+        for (const record of records) {
+          if (record.type === "characterData") doText(record.target);
+          else if (record.type === "attributes") { if (record.target.nodeType === 1) doAttrs(record.target); }
+          else record.addedNodes.forEach((node) => {
+            if (node.nodeType === 3 && node.parentElement) {
+              /* a text node added beside inline markup: retry the whole sentence */
+              const parent = node.parentElement;
+              if (richKey(parent)) walk(parent); else doText(node);
+            } else walk(node);
+          });
+        }
+      }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS.concat(["value"]) });
+      const title = document.querySelector("title");
+      if (title) new MutationObserver(doTitle).observe(title, { childList: true, characterData: true, subtree: true });
+    }
+
+    if (probe || misses) {
+      /* test runs only: report every string the page shows, so the dictionaries can be checked for gaps */
+      window.setInterval(() => {
+        if (!unsent.length) return;
+        const batch = unsent; unsent = [];
+        fetch("/__i18n", { method: "POST", body: JSON.stringify(batch), keepalive: true }).catch(() => {});
+      }, 250);
+    }
+    if (probe) {
+      start();
+    } else if (active) {
+      const ready = () => {
+        const source = window.TP_DICT;
+        if (!source || dict) return;
+        dict = { t: source.t || {}, h: source.h || {} };
+        patterns = (source.p || []).map(([re, template]) => [new RegExp(re), template]);
+        try { plural = new Intl.PluralRules(APP_LOCALE); } catch (error) { plural = null; }
+        start();
+      };
+      if (window.TP_DICT) ready(); else window.addEventListener("tp-dict", ready, { once: true });
+      /* never leave the page hidden if the dictionary cannot load */
+      window.setTimeout(() => document.documentElement.classList.add("i18n-ready"), 2500);
+    }
+    if (window.__i18nMiss) window.__tpText = text;   /* test hook */
+    return { text, lang: LANG.code, ready: () => LANG.code === "en" || Boolean(dict) };
+  })();
+  /* for page code that builds text itself (search matching, marked titles) */
+  const tr = (value) => I18N.text(value);
+
+  /* ---- the language menu in the header ---- */
+  function initLanguageMenu() {
+    const menu = document.getElementById("lang-menu");
+    if (!menu) return;
+    const list = menu.querySelector(".lang-list");
+    menu.querySelector(".lang-current").textContent = LANG.short;
+    LANGS.forEach((item) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "lang-item";
+      button.lang = item.code === "uz" ? "uz-Latn" : item.code;
+      button.setAttribute("translate", "no");
+      button.setAttribute("aria-current", item.code === LANG.code ? "true" : "false");
+      button.append(Object.assign(document.createElement("span"), { textContent: item.name }), Object.assign(document.createElement("span"), { className: "lang-code", textContent: item.short }));
+      button.addEventListener("click", () => {
+        if (item.code === LANG.code) { menu.open = false; return; }
+        try { window.localStorage.setItem("tp:lang", item.code); } catch (error) { /* private mode: lasts for this page only */ }
+        window.location.reload();
+      });
+      list.append(button);
+    });
+    document.addEventListener("click", (event) => { if (menu.open && !menu.contains(event.target)) menu.open = false; });
+    menu.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && menu.open) { menu.open = false; menu.querySelector("summary").focus(); }
     });
   }
 
@@ -787,17 +1022,17 @@
   function setupMoney(currency) {
     state.currency = currency;
     try {
-      const probe = new Intl.NumberFormat(undefined, { style: "currency", currency });
+      const probe = new Intl.NumberFormat(APP_LOCALE, { style: "currency", currency });
       state.digits = probe.resolvedOptions().maximumFractionDigits;
-      state.formatter = new Intl.NumberFormat(undefined, { style: "currency", currency, minimumFractionDigits: state.digits, maximumFractionDigits: state.digits });
+      state.formatter = new Intl.NumberFormat(APP_LOCALE, { style: "currency", currency, minimumFractionDigits: state.digits, maximumFractionDigits: state.digits });
     } catch (error) {
       state.digits = 2;
       state.formatter = null;
     }
-    state.plainFormatter = new Intl.NumberFormat(undefined, { minimumFractionDigits: state.digits, maximumFractionDigits: state.digits });
+    state.plainFormatter = new Intl.NumberFormat(APP_LOCALE, { minimumFractionDigits: state.digits, maximumFractionDigits: state.digits });
   }
   function digitsFor(code) {
-    try { return new Intl.NumberFormat(undefined, { style: "currency", currency: code }).resolvedOptions().maximumFractionDigits; }
+    try { return new Intl.NumberFormat(APP_LOCALE, { style: "currency", currency: code }).resolvedOptions().maximumFractionDigits; }
     catch (error) { return 2; }
   }
   function money(minor) {
@@ -1037,7 +1272,7 @@
   function compactMoney(minor) {
     const value = minor / Math.pow(10, state.digits);
     try {
-      return new Intl.NumberFormat(undefined, { style: "currency", currency: state.currency, notation: "compact", minimumFractionDigits: 0, maximumFractionDigits: Math.abs(value) < 1000 ? 0 : 1 }).format(value);
+      return new Intl.NumberFormat(APP_LOCALE, { style: "currency", currency: state.currency, notation: "compact", minimumFractionDigits: 0, maximumFractionDigits: Math.abs(value) < 1000 ? 0 : 1 }).format(value);
     } catch (error) {
       return money(minor);
     }
@@ -1352,7 +1587,7 @@
   function addExpense(values) {
     if (state.expenses.length >= MAX_EXPENSES) {
       const box = $("form-error");
-      box.textContent = "This budget already has the most expenses it can hold (" + MAX_EXPENSES.toLocaleString() + "). Delete some first.";
+      box.textContent = "This budget already has the most expenses it can hold (" + MAX_EXPENSES.toLocaleString(APP_LOCALE) + "). Delete some first.";
       box.hidden = false;
       return;
     }
@@ -1486,7 +1721,7 @@
     if (data.currency !== state.trip.currency) {
       return { error: "This file is in " + data.currency.slice(0, 10) + " but this trip uses " + state.trip.currency + ". Amounts are never converted." };
     }
-    if (data.expenses.length > MAX_EXPENSES) return { error: "This file has more than " + MAX_EXPENSES.toLocaleString() + " expenses." };
+    if (data.expenses.length > MAX_EXPENSES) return { error: "This file has more than " + MAX_EXPENSES.toLocaleString(APP_LOCALE) + " expenses." };
     const budget = readBudget(data.totalBudgetMinor);
     if (budget.error) return { error: "The budget amount is not valid: " + budget.error + "." };
     const expenses = [];
@@ -1567,7 +1802,7 @@
       added += 1;
     });
     if (next.length > MAX_EXPENSES) {
-      showNotice("Importing would take this budget past " + MAX_EXPENSES.toLocaleString() + " expenses. Nothing was changed.", "warning");
+      showNotice("Importing would take this budget past " + MAX_EXPENSES.toLocaleString(APP_LOCALE) + " expenses. Nothing was changed.", "warning");
       return;
     }
     state.expenses = next;

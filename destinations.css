@@ -894,6 +894,11 @@ input:not([type="checkbox"]):not([type="radio"]), select, textarea {
   font-weight: 100 900; font-style: normal; font-display: swap;
   ascent-override: 96%; descent-override: 26%; line-gap-override: 0%;   /* centres capitals inside pills and buttons */
 }
+@font-face {   /* Russian: downloaded only when Cyrillic letters are on the page */
+  font-family: "Overpass"; src: url("./fonts/overpass-cyrillic.woff") format("woff");
+  font-weight: 100 900; font-style: normal; font-display: swap; unicode-range: U+0400-052F, U+2116;
+  ascent-override: 96%; descent-override: 26%; line-gap-override: 0%;
+}
 :root {
   --font: "Overpass", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --serif: var(--font);
@@ -960,6 +965,59 @@ h1, h2, h3 { overflow-wrap: anywhere; hyphens: auto; }
 .site-header .account-panel :focus-visible { outline-color: var(--focus); }
 .site-header .account-panel { width: min(340px, calc(100vw - 24px)); }
 .site-header .account-email { font-size: 0.8125rem; }
+
+/* ---------- language menu ---------- */
+.lang-menu { position: relative; }
+.lang-button {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--glass-edge); background-color: var(--surface); color: var(--ink); font-size: 0.875rem; font-weight: 750;
+  box-shadow: var(--glass-shine); list-style: none; user-select: none;
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+}
+.lang-button::-webkit-details-marker { display: none; }
+.lang-button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.lang-button:hover { background-color: var(--surface-3); }
+.lang-menu[open] .lang-button { border-color: var(--teal); }
+.lang-list {
+  position: absolute; right: 0; top: calc(100% + 10px); z-index: 60; display: grid; gap: 2px; width: 210px; padding: 8px;
+  border: 1px solid var(--glass-edge); border-radius: 22px; background: var(--dialog-bg); color: var(--ink);
+  -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+  box-shadow: var(--glass-shine), 0 30px 70px -20px rgba(2, 6, 23, 0.55);
+}
+.lang-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0 12px;
+  border: 0; border-radius: 14px; background: none; color: var(--ink); font: inherit; font-weight: 650; text-align: left; cursor: pointer;
+}
+.lang-item:hover { background: var(--surface-3); }
+.lang-item[aria-current="true"] { background: var(--teal-soft); color: var(--teal-ink); }
+.lang-code { color: var(--muted); font-size: 0.8125rem; font-weight: 700; }
+.lang-item[aria-current="true"] .lang-code { color: inherit; }
+:root:not([data-theme="dark"]) .site-header .lang-button { border-color: rgba(12, 12, 29, 0.14); }
+:root:not([data-theme="dark"]) .site-header .lang-button:hover { background-color: rgba(255, 255, 255, 0.85); }
+@media (max-width: 520px) { .lang-current { display: none; } .lang-button { width: 44px; padding: 0; justify-content: center; } }
+
+/* other languages: keep the page hidden for the moment it takes to swap the words in (never longer than 2.5 s) */
+html[data-lang]:not(.i18n-ready) body { opacity: 0; }
+html.i18n-ready body { transition: opacity 0.15s ease; }
+
+/* Korean: no negative tracking on Hangul, keep words whole, a little more line height */
+:root[lang="ko"] { --font: "Overpass", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif; word-break: keep-all; }
+:root[lang="ko"] :is(h1, h2, h3, .hero h1) { letter-spacing: -0.01em; line-height: 1.15; }
+:root[lang="ko"] .hero h1 { max-width: 11ch; }
+:root[lang="ru"] .hero h1, :root[lang="uz-Latn"] .hero h1 { max-width: 11ch; }
+
+/* the language button sits on the right with the theme switch */
+.header-inner .lang-menu { margin-left: auto; }
+.account:not([hidden]) ~ .lang-menu { margin-left: 0; }
+.lang-menu ~ .theme-toggle { margin-left: 0; }
+/* footer columns wrap to fit long words (Russian and Uzbek labels, large text) */
+.footer-links { grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); }
+.site-footer a { overflow-wrap: anywhere; }
+
+/* translated pages: long words (Russian and Uzbek, or large text) wrap instead of pushing the page wider */
+:root[data-lang] :is(p, li, dd, dt, h1, h2, h3, h4, label, legend, td, th, button, a, span, strong, summary, option) { overflow-wrap: anywhere; }
+:root[data-lang] :is(.legal-body, .legal-services div, .panel, .stat, .field, .expense-main, .item-main) { min-width: 0; }
+:root[lang="ru"] :is(p, li, dd), :root[lang="uz-Latn"] :is(p, li, dd) { hyphens: auto; }
 
 /* ==========================================================================
    Explore (index.html)

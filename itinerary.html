@@ -9,14 +9,69 @@
     <title>Itinerary · TravelTogether</title>
     <link rel="icon" type="image/svg+xml" href="./logo.svg">
     <link rel="preload" href="./fonts/overpass.woff" as="font" type="font/woff" crossorigin>
-    <link rel="stylesheet" href="./itinerary.css?v=fad8d8421a">
+    <link rel="stylesheet" href="./itinerary.css?v=16ce742a02">
     <script>(function () {
+  window.TP_I18N_VERSION = {"ru": "45b945db4b", "ko": "9fbc0c7b79", "uz": "33340f5e07"};
+  /* Some browsers ship without Uzbek date data and print "2027 M04 10". When that happens,
+     Uzbek dates are built from the English parts with Uzbek month and day names, and
+     numbers use the Uzbek separators (510 000,50). */
+  function uzbekDates() {
+    try { if (/yanvar/i.test(new Intl.DateTimeFormat("uz", { month: "long" }).format(new Date(2027, 0, 15)))) return; } catch (error) { return; }
+    var DTF = Intl.DateTimeFormat, NF = Intl.NumberFormat;
+    var M = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"];
+    var MS = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avg", "sen", "okt", "noy", "dek"];
+    var W = ["yakshanba", "dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba"];
+    var WS = ["Yak", "Dush", "Sesh", "Chor", "Pay", "Jum", "Shan"];
+    var uz = function (locales) { return /^uz/i.test(String(Array.isArray(locales) ? locales[0] : locales || "")); };
+    function UzDate(locales, options) {
+      if (!uz(locales)) return new DTF(locales, options);
+      var inner = new DTF("en-GB", Object.assign({}, options, { hourCycle: "h23" }));
+      var opt = inner.resolvedOptions();
+      var word = function (part, date) {
+        if (part.type === "month" && !/numeric|2-digit/.test(opt.month)) return Object.assign({}, part, { value: (opt.month === "long" ? M : MS)[date.getMonth()] });
+        if (part.type === "weekday") return Object.assign({}, part, { value: (opt.weekday === "long" ? W : WS)[date.getDay()] });
+        return part;
+      };
+      var join = function (parts) {
+        var out = "";
+        for (var i = 0; i < parts.length; i++) {
+          var p = parts[i], next = parts[i + 2];
+          if (p.type === "day" && parts[i + 1] && parts[i + 1].type === "literal" && next && next.type === "month" && isNaN(next.value)) { out += p.value + "-" + next.value; i += 2; continue; }
+          out += p.value;
+        }
+        return out;
+      };
+      var self = Object.create(UzDate.prototype);
+      self.formatToParts = function (date) { date = new Date(date === undefined ? Date.now() : date); return inner.formatToParts(date).map(function (p) { return word(p, date); }); };
+      self.format = function (date) { return join(self.formatToParts(date)); };
+      self.formatRangeToParts = function (a, b) { var A = new Date(a), B = new Date(b); return inner.formatRangeToParts(A, B).map(function (p) { return word(p, p.source === "endRange" ? B : A); }); };
+      self.formatRange = function (a, b) { return join(self.formatRangeToParts(a, b)); };
+      self.resolvedOptions = function () { return Object.assign({}, opt, { locale: "uz" }); };
+      return self;
+    }
+    UzDate.supportedLocalesOf = DTF.supportedLocalesOf;
+    function UzNumber(locales, options) { return new NF(uz(locales) ? "ru" : locales, options); }
+    UzNumber.supportedLocalesOf = NF.supportedLocalesOf;
+    Intl.DateTimeFormat = UzDate;
+    Intl.NumberFormat = UzNumber;
+  }
   var theme = null;
   try { theme = window.localStorage.getItem("tp:theme"); } catch (error) {}
   if (theme !== "light" && theme !== "dark") {
     theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
   document.documentElement.setAttribute("data-theme", theme);
+  var lang = null;
+  try { lang = window.localStorage.getItem("tp:lang"); } catch (error) {}
+  if (lang === "ru" || lang === "ko" || lang === "uz") {
+    document.documentElement.setAttribute("data-lang", lang);
+    if (lang === "uz") uzbekDates();
+    document.documentElement.setAttribute("lang", lang === "uz" ? "uz-Latn" : lang);
+    var dict = document.createElement("script");
+    dict.src = "./i18n/" + lang + ".js?v=" + (window.TP_I18N_VERSION || {})[lang];
+    dict.async = true;
+    document.head.appendChild(dict);
+  }
   var meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute("content", theme === "dark" ? "#060b18" : "#f8fafc");
 })();</script>
@@ -34,11 +89,18 @@
           <a href="./packing.html">Packing</a>
         </nav>
         <div class="account" id="account" hidden></div>
+        <details class="lang-menu" id="lang-menu">
+          <summary class="lang-button" aria-label="Language" title="Language">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg>
+            <span class="lang-current" translate="no">EN</span>
+          </summary>
+          <div class="lang-list" role="group" aria-label="Language"></div>
+        </details>
         <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch theme" title="Switch theme">
           <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z"/></svg>
           <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>
         </button>
-        <a class="header-cta" href="./index.html#trip-form">Plan a trip</a>
+        <a class="header-cta" href="./index.html#trip-form" data-i18n="header: Plan a trip">Plan a trip</a>
       </div>
     </header>
     <main id="main" class="page-shell" tabindex="-1">
@@ -235,6 +297,6 @@
         <p class="footer-legal"><a href="./privacy.html">Privacy</a><a href="./terms.html">Terms</a><a href="#main">Back to top</a></p>
       </div>
     </footer>
-    <script src="./itinerary.js?v=936a272050"></script>
+    <script src="./itinerary.js?v=319c4439a7"></script>
   </body>
 </html>
