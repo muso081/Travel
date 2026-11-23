@@ -9,7 +9,7 @@
     <title>Explore destinations · TravelTogether</title>
     <link rel="icon" type="image/svg+xml" href="./logo.svg">
     <link rel="preload" href="./fonts/overpass.woff" as="font" type="font/woff" crossorigin>
-    <link rel="stylesheet" href="./destinations.css?v=2d490285f7">
+    <link rel="stylesheet" href="./destinations.css?v=dfb3b0a462">
     <script>(function () {
   var theme = null;
   try { theme = window.localStorage.getItem("tp:theme"); } catch (error) {}
@@ -52,13 +52,17 @@
       </noscript>
 
       <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-photo" aria-hidden="true"></div>
         <div class="hero-copy">
           <h1 id="hero-title">Where are we going?</h1>
           <p class="lede">Pick a place and set the dates. Your group gets one plan: what you do each day, what it costs, and what to pack.</p>
           <form class="hero-search" id="hero-search" role="search" aria-label="Find a destination">
             <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="9" cy="9" r="5.5"/><path d="M13.2 13.2 17 17"/></svg>
-            <input id="hero-q" type="search" aria-label="Search places, countries or activities" placeholder="City, country or activity" autocomplete="off">
+            <input id="hero-q" type="search" aria-label="Search places, countries or activities" placeholder="City, country or activity" autocomplete="off"
+              role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="hero-suggest" aria-haspopup="listbox">
             <button class="button button-primary" type="submit">Find</button>
+            <div class="suggest" id="hero-suggest" role="listbox" aria-label="Suggestions" hidden></div>
+            <p class="visually-hidden" id="suggest-status" role="status" aria-live="polite"></p>
           </form>
           <div class="hero-picks" id="hero-picks">
             <p id="picks-label">Popular</p>
@@ -339,6 +343,6 @@
         <p class="footer-legal"><a href="./privacy.html">Privacy</a><a href="./terms.html">Terms</a><a href="#main">Back to top</a></p>
       </div>
     </footer>
-    <script src="./destinations.js?v=de69e550c5"></script>
+    <script src="./destinations.js?v=2bdcdac349"></script>
   </body>
 </html>

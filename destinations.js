@@ -1497,6 +1497,176 @@
     applyFilters();
   }
 
+  /* ======================================================================
+     Hero search suggestions (like a travel site's search box): places,
+     sights, activities and regions that match what is typed, with the
+     matching letters marked. A combobox: arrows move, Enter picks, Esc closes.
+     ====================================================================== */
+  function suggestionsFor(raw) {
+    const q = strip(raw.trim());
+    if (!q) return [];
+    const rank = (text) => {
+      const t = strip(text);
+      if (t.startsWith(q)) return 0;
+      if (t.split(/[^a-z0-9]+/).some((word) => word.startsWith(q))) return 1;
+      return q.length >= 3 && t.includes(q) ? 2 : -1;   /* short searches match word starts only */
+    };
+    const places = [];
+    const sights = [];
+    DESTINATIONS.forEach((dest) => {
+      const byName = rank(dest.name);
+      const byCountry = rank(dest.country);
+      if (byName >= 0 || byCountry >= 0) {
+        places.push({ type: "place", dest, score: byName >= 0 ? byName : 3 + byCountry, title: dest.name,
+          sub: dest.country + ", " + dest.region, side: "About " + money(dailyTotal(dest), dest.currency) + " a day" });
+      } else if (q.length >= 2) {
+        (dest.highlights || []).forEach((sight) => {
+          const score = rank(sight);
+          if (score >= 0) sights.push({ type: "sight", dest, score, title: sight, sub: "In " + dest.name + ", " + dest.country });
+        });
+      }
+    });
+    const activities = ACTIVITIES.map((item) => ({ item, score: rank(item.label) })).filter((x) => x.score >= 0)
+      .map(({ item, score }) => ({ type: "activity", id: item.id, score, title: item.label,
+        sub: DESTINATIONS.filter((dest) => dest.activities.includes(item.id)).length + " places" }));
+    const regions = REGIONS.map((region) => ({ region, score: rank(region) })).filter((x) => x.score >= 0)
+      .map(({ region, score }) => ({ type: "region", region, score, title: region,
+        sub: DESTINATIONS.filter((dest) => dest.region === region).length + " places" }));
+    const byScore = (a, b) => a.score - b.score || a.title.localeCompare(b.title);
+    const groups = [
+      { label: "Places", items: places.sort(byScore).slice(0, 5) },
+      { label: "Things to see", items: sights.sort(byScore).slice(0, 3) },
+      { label: "Activities and regions", items: activities.concat(regions).sort(byScore).slice(0, 3) }
+    ].filter((group) => group.items.length);
+    groups.push({ label: "", items: [{ type: "all", title: "Show every match for \u201c" + raw.trim() + "\u201d", sub: "" }] });
+    return groups;
+  }
+
+  /* marks the typed letters inside a title, ignoring accents and case */
+  function marked(text, raw) {
+    const q = strip(raw.trim());
+    const node = document.createDocumentFragment();
+    if (!q) { node.append(text); return node; }
+    const chars = Array.from(text);
+    const folded = chars.map((ch) => strip(ch));
+    const joined = folded.join("");
+    const at = joined.indexOf(q);
+    if (at < 0) { node.append(text); return node; }
+    let pos = 0, start = -1, end = -1;
+    folded.forEach((part, index) => {
+      if (start < 0 && pos >= at && part) start = index;
+      pos += part.length;
+      if (end < 0 && pos >= at + q.length) end = index + 1;
+    });
+    node.append(chars.slice(0, start).join(""), el("mark", "", chars.slice(start, end).join("")), chars.slice(end).join(""));
+    return node;
+  }
+
+  function initSuggest() {
+    const input = $("hero-q");
+    const box = $("hero-suggest");
+    const status = $("suggest-status");
+    if (!input || !box) return;
+    let options = [];
+    let active = -1;
+
+    const close = () => {
+      box.hidden = true; box.replaceChildren(); options = []; active = -1;
+      input.setAttribute("aria-expanded", "false"); input.removeAttribute("aria-activedescendant");
+    };
+    const highlight = (index) => {
+      options.forEach((option, i) => option.node.setAttribute("aria-selected", i === index ? "true" : "false"));
+      active = index;
+      if (index < 0) { input.removeAttribute("aria-activedescendant"); return; }
+      input.setAttribute("aria-activedescendant", options[index].node.id);
+      options[index].node.scrollIntoView({ block: "nearest" });
+    };
+    const choose = (item) => {
+      close();
+      if (item.type === "place" || item.type === "sight") { openDetail(item.dest); return; }
+      if (item.type === "activity" || item.type === "region") {
+        const search = $("search");
+        search.value = ""; state.filters.query = "";
+        if (item.type === "activity") {
+          const radio = document.querySelector('input[name="activity"][value="' + item.id + '"]');
+          if (radio) { radio.checked = true; state.filters.activity = item.id; }
+        } else {
+          $("region").value = item.region; state.filters.region = item.region;
+        }
+        input.value = "";
+        applyFilters();
+        jumpTo($("destinations"), $("destinations-title"));
+        return;
+      }
+      $("hero-search").requestSubmit();
+    };
+    const render = () => {
+      const groups = suggestionsFor(input.value);
+      box.replaceChildren(); options = []; active = -1;
+      if (!groups.length) { close(); status.textContent = ""; return; }
+      groups.forEach((group, g) => {
+        const wrap = el("div", "suggest-group");
+        wrap.setAttribute("role", "group");
+        if (group.label) {
+          const head = el("p", "suggest-head", group.label);
+          head.id = "suggest-g" + g;
+          head.setAttribute("role", "presentation");
+          wrap.setAttribute("aria-labelledby", head.id);
+          wrap.append(head);
+        } else {
+          wrap.setAttribute("aria-label", "Search");
+        }
+        group.items.forEach((item) => {
+          const node = el("div", "suggest-option suggest-" + item.type);
+          node.id = "suggest-o" + options.length;
+          node.setAttribute("role", "option");
+          node.setAttribute("aria-selected", "false");
+          const icon = el("span", "suggest-icon");
+          icon.setAttribute("aria-hidden", "true");
+          const words = el("span", "suggest-words");
+          const title = el("span", "suggest-title");
+          title.append(item.type === "all" ? item.title : marked(item.title, input.value));
+          words.append(title);
+          if (item.sub) words.append(el("span", "suggest-sub", item.sub));
+          node.append(icon, words);
+          if (item.side) node.append(el("span", "suggest-side", item.side));
+          const index = options.length;
+          node.addEventListener("pointerdown", (event) => event.preventDefault());   /* keep focus in the search box */
+          node.addEventListener("click", () => choose(item));
+          node.addEventListener("pointermove", () => { if (active !== index) highlight(index); });
+          options.push({ node, item });
+          wrap.append(node);
+        });
+        box.append(wrap);
+      });
+      box.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+      const found = options.length - 1;
+      status.textContent = found ? found + (found === 1 ? " suggestion" : " suggestions") + ". Use the arrow keys to choose." : "No matching places. Press Enter to search anyway.";
+    };
+
+    input.addEventListener("input", render);
+    input.addEventListener("focus", () => { if (input.value.trim()) render(); });
+    input.addEventListener("blur", () => window.setTimeout(close, 120));
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") { if (!box.hidden) { event.preventDefault(); close(); } return; }
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        if (box.hidden) { if (input.value.trim()) render(); else return; }
+        event.preventDefault();
+        if (!options.length) return;
+        const step = event.key === "ArrowDown" ? 1 : -1;
+        highlight(active < 0 ? (step > 0 ? 0 : options.length - 1) : (active + step + options.length) % options.length);
+        return;
+      }
+      if (event.key === "Enter" && !box.hidden && active >= 0) {
+        event.preventDefault();
+        choose(options[active].item);
+      }
+    });
+    $("hero-search").addEventListener("submit", close);
+    document.addEventListener("pointerdown", (event) => { if (!event.target.closest("#hero-search")) close(); });
+  }
+
   /* ---- details dialog ---- */
   function fact(list, term, value) {
     const row = el("div");
@@ -2342,6 +2512,7 @@
       applyFilters();
     });
     $("surprise").addEventListener("click", surprise);
+    initSuggest();
     /* one-tap picks under the hero search open that destination's details */
     const picks = $("hero-picks");
     if (picks) {
