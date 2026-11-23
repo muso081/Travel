@@ -918,6 +918,48 @@ h3 { font-weight: 700; letter-spacing: -0.015em; }
 .header-cta { padding: 4px 22px; }
 /* heavy display words can be wider than a phone at large text sizes: hyphenate only when a word cannot fit */
 h1, h2, h3 { overflow-wrap: anywhere; hyphens: auto; }
+
+/* ---------- account: a round profile picture, not a pill (which read as a switch) ---------- */
+.account-button {
+  display: grid; place-items: center; width: 44px; height: 44px; min-height: 0; padding: 0; gap: 0;
+  border: 0; border-radius: 50%; background: none !important; box-shadow: none; cursor: pointer;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.account-button .account-name {   /* still read out by screen readers, and the menu shows it */
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+.account-avatar {
+  width: 40px; height: 40px; font-size: 0.875rem; letter-spacing: 0.02em;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55), 0 6px 16px -6px rgba(64, 64, 242, 0.8);
+  transition: box-shadow 0.2s ease, transform 0.2s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.account-button:hover .account-avatar { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8), 0 8px 20px -6px rgba(64, 64, 242, 0.9); }
+.account-menu[open] .account-button .account-avatar { box-shadow: 0 0 0 3px var(--teal), 0 8px 20px -6px rgba(64, 64, 242, 0.9); }
+.account-button:active .account-avatar { transform: scale(0.94); }
+:root:not([data-theme="dark"]) .account-avatar { box-shadow: 0 0 0 2px #ffffff, 0 6px 16px -6px rgba(64, 64, 242, 0.7); }
+:root:not([data-theme="dark"]) .account-button:hover .account-avatar { box-shadow: 0 0 0 3px #ffffff, 0 8px 20px -6px rgba(64, 64, 242, 0.8); }
+.account-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+
+/* the menu follows the theme: thick glass, token colours */
+.site-header .account-panel {
+  width: 290px; padding: 10px; gap: 2px; border: 1px solid var(--glass-edge); border-radius: 24px;
+  background: var(--dialog-bg); color: var(--ink);
+  box-shadow: var(--glass-shine), 0 30px 70px -20px rgba(2, 6, 23, 0.55);
+}
+.account-head { display: flex; gap: 12px; align-items: center; padding: 8px 8px 12px; margin-bottom: 4px; border-bottom: 1px solid var(--line); }
+.account-avatar-lg { flex: none; width: 46px; height: 46px; font-size: 1rem; box-shadow: none !important; }
+.account-words { min-width: 0; }
+.site-header .account-who { color: var(--ink); font-size: 1rem; font-weight: 750; }
+.site-header .account-email { color: var(--muted); }
+.site-header .account-sync { margin: 4px 8px 6px; color: var(--ok); }
+.site-header .account-sync[data-state="saving"] { color: var(--muted); }
+.site-header .account-sync[data-state="error"] { color: var(--danger); }
+.site-header .account-item { min-height: 44px; padding: 0 12px; border-radius: 14px; color: var(--ink); }
+.site-header .account-item:hover { background: var(--surface-3); }
+.site-header .account-out { color: var(--danger); }
+.site-header .account-panel :focus-visible { outline-color: var(--focus); }
+.site-header .account-panel { width: min(340px, calc(100vw - 24px)); }
+.site-header .account-email { font-size: 0.8125rem; }
 /* ---------- photo frames: shimmer while loading, initials if no photo ---------- */
 .photo-frame { position: relative; overflow: hidden; background: linear-gradient(110deg, #17173a 30%, #26265a 50%, #17173a 70%) 0 0 / 300% 100% #17173a; animation: frame-shimmer 1.5s linear infinite; }
 .photo-frame.has-photo, .photo-frame.no-photo { animation: none; }

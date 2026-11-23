@@ -555,7 +555,11 @@
     summary.setAttribute("aria-label", "Account menu for " + name);
     summary.append(el("span", "account-avatar", initialsFor(name)), el("span", "account-name", name));
     const panel = el("div", "account-panel");
-    panel.append(el("p", "account-who", name), el("p", "account-email", session.user.email));
+    const who = el("div", "account-head");
+    const words = el("div", "account-words");
+    words.append(el("p", "account-who", name), el("p", "account-email", session.user.email));
+    who.append(el("span", "account-avatar account-avatar-lg", initialsFor(name)), words);
+    panel.append(who);
     const sync = el("p", "account-sync");
     sync.id = "account-sync";
     sync.setAttribute("role", "status");
